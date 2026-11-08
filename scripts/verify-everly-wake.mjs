@@ -2,7 +2,7 @@
 // ignored, and mail for Everly fires her routine with a one-line pointer.
 import crypto from 'node:crypto';
 const secretRaw = crypto.randomBytes(24).toString('base64');
-process.env.RESEND_WEBHOOK_SECRET = 'whsec_' + secretRaw;
+process.env.RESEND_WEBHOOK = 'whsec_' + secretRaw;
 process.env.EVERLY_FIRE_ID = 'trig_test123';
 process.env.EVERLY_TOKEN = 'test-token';
 const fired = [];

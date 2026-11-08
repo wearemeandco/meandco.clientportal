@@ -5,7 +5,8 @@
 // email herself and verifies the sender before she acts.
 //
 // Netlify environment variables (names only, values typed into Netlify):
-//   RESEND_WEBHOOK_SECRET   the signing secret Resend shows for this webhook (whsec_...)
+//   RESEND_WEBHOOK          the signing secret Resend shows for this webhook (whsec_...)
+//                           (RESEND_WEBHOOK_SECRET is read too)
 //   EVERLY_FIRE_ID          Everly's routine id (trig_...) or its full API trigger URL
 //   EVERLY_TOKEN            the token generated with that API trigger
 //   EVERLY_INBOX            the address that wakes her, default everly@admin.weareme.co
@@ -34,7 +35,7 @@ export default async (req) => {
   if (req.method !== 'POST') return new Response('method not allowed', { status: 405 });
   const body = await req.text();
   const h = req.headers;
-  if (!verify(process.env.RESEND_WEBHOOK_SECRET, h.get('svix-id'), h.get('svix-timestamp'), h.get('svix-signature'), body)) {
+  if (!verify(process.env.RESEND_WEBHOOK || process.env.RESEND_WEBHOOK_SECRET, h.get('svix-id'), h.get('svix-timestamp'), h.get('svix-signature'), body)) {
     return new Response('bad signature', { status: 401 });
   }
   let evt;
