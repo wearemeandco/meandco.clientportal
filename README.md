@@ -14,8 +14,8 @@ Import this repository into Netlify (production branch `main`, deploy previews o
 | `PORTAL_MAIL_FROM` | the sender, like `Me&Co. <hello@weareme.co>` |
 | `PORTAL_PASSWORD_<SLUG>` | one per client, their passcode |
 | `RESEND_WEBHOOK_SECRET` | the signing secret of the Resend webhook below |
-| `EVERLY_ROUTINE_URL` | Everly's routine API trigger URL |
-| `EVERLY_ROUTINE_TOKEN` | the token for that trigger |
+| `EVERLY_FIRE_ID` | Everly's routine id (`trig_...`), or its full API trigger URL |
+| `EVERLY_TOKEN` | the token for that trigger |
 
 ## Waking Everly
 

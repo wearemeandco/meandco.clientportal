@@ -6,12 +6,21 @@
 //
 // Netlify environment variables (names only, values typed into Netlify):
 //   RESEND_WEBHOOK_SECRET   the signing secret Resend shows for this webhook (whsec_...)
-//   EVERLY_ROUTINE_URL      Everly's routine API trigger URL (.../routines/trig_.../fire)
-//   EVERLY_ROUTINE_TOKEN    the token generated with that trigger
+//   EVERLY_FIRE_ID          Everly's routine id (trig_...) or its full API trigger URL
+//   EVERLY_TOKEN            the token generated with that API trigger
 //   EVERLY_INBOX            the address that wakes her, default everly@admin.weareme.co
 import crypto from 'node:crypto';
 
 const BETA = 'experimental-cc-routine-2026-04-01';
+const FIRE_BASE = 'https://api.anthropic.com/v1/claude_code/routines/';
+
+// The fire id is a trig_ id or the whole trigger URL; either becomes the URL.
+function fireUrl(v) {
+  const x = String(v || '').trim();
+  if (!x) return '';
+  if (/^https:\/\//.test(x)) return x;
+  return FIRE_BASE + encodeURIComponent(x) + '/fire';
+}
 const TOLERANCE_S = 300;
 
 function verify(secret, id, ts, sigHeader, body) {
@@ -44,10 +53,10 @@ export default async (req) => {
   const to = [].concat(d.to || []).map((x) => String(x).toLowerCase());
   if (!to.some((x) => x.includes(inbox))) return new Response('not for Everly', { status: 200 });
 
-  const url = process.env.EVERLY_ROUTINE_URL;
-  const token = process.env.EVERLY_ROUTINE_TOKEN;
+  const url = fireUrl(process.env.EVERLY_FIRE_ID);
+  const token = process.env.EVERLY_TOKEN;
   if (!url || !token) {
-    console.error('[hook-resend] EVERLY_ROUTINE_URL or EVERLY_ROUTINE_TOKEN is not set');
+    console.error('[hook-resend] EVERLY_FIRE_ID or EVERLY_TOKEN is not set');
     return new Response('wake not set up', { status: 503 });
   }
   const text = `Resend: email received ${clip(d.email_id, 80)} from ${clip(d.from, 120)} subject ${clip(d.subject, 160)}`;

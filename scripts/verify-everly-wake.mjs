@@ -3,8 +3,8 @@
 import crypto from 'node:crypto';
 const secretRaw = crypto.randomBytes(24).toString('base64');
 process.env.RESEND_WEBHOOK_SECRET = 'whsec_' + secretRaw;
-process.env.EVERLY_ROUTINE_URL = 'https://example.test/fire';
-process.env.EVERLY_ROUTINE_TOKEN = 'test-token';
+process.env.EVERLY_FIRE_ID = 'trig_test123';
+process.env.EVERLY_TOKEN = 'test-token';
 const fired = [];
 globalThis.fetch = async (url, init) => { fired.push({ url, init }); return new Response('{}', { status: 200 }); };
 const { default: hook } = await import('../netlify/functions/hook-resend/hook-resend.mjs');
@@ -22,5 +22,6 @@ const other = JSON.stringify({ type: 'email.received', data: { email_id: 'z', fr
 check('mail for someone else is ignored', (await hook(req(other, sign(other)))).status === 200 && fired.length === 0);
 const r = await hook(req(forEverly, sign(forEverly)));
 check('mail for Everly fires her routine', r.status === 200 && fired.length === 1);
+check('fire id becomes the trigger URL', fired[0].url === 'https://api.anthropic.com/v1/claude_code/routines/trig_test123/fire');
 check('payload is a one-line pointer', JSON.parse(fired[0].init.body).text === 'Resend: email received abc from melody@weareme.co subject Hi');
 console.log(fail ? `\n${fail} failed` : '\nall passed'); process.exit(fail ? 1 : 0);
