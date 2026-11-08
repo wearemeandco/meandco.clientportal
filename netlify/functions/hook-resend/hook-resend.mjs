@@ -10,17 +10,10 @@
 //   EVERLY_TOKEN            the token generated with that API trigger
 //   EVERLY_INBOX            the address that wakes her, default everly@admin.weareme.co
 import crypto from 'node:crypto';
+import everly from '../lib/everly.js';
 
-const BETA = 'experimental-cc-routine-2026-04-01';
-const FIRE_BASE = 'https://api.anthropic.com/v1/claude_code/routines/';
+const { wakeEverly } = everly;
 
-// The fire id is a trig_ id or the whole trigger URL; either becomes the URL.
-function fireUrl(v) {
-  const x = String(v || '').trim();
-  if (!x) return '';
-  if (/^https:\/\//.test(x)) return x;
-  return FIRE_BASE + encodeURIComponent(x) + '/fire';
-}
 const TOLERANCE_S = 300;
 
 function verify(secret, id, ts, sigHeader, body) {
@@ -53,27 +46,9 @@ export default async (req) => {
   const to = [].concat(d.to || []).map((x) => String(x).toLowerCase());
   if (!to.some((x) => x.includes(inbox))) return new Response('not for Everly', { status: 200 });
 
-  const url = fireUrl(process.env.EVERLY_FIRE_ID);
-  const token = process.env.EVERLY_TOKEN;
-  if (!url || !token) {
-    console.error('[hook-resend] EVERLY_FIRE_ID or EVERLY_TOKEN is not set');
-    return new Response('wake not set up', { status: 503 });
-  }
   const text = `Resend: email received ${clip(d.email_id, 80)} from ${clip(d.from, 120)} subject ${clip(d.subject, 160)}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'anthropic-beta': BETA,
-      'anthropic-version': '2023-06-01',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ text }),
-  });
-  if (!res.ok) {
-    console.error('[hook-resend] fire failed', res.status, (await res.text()).slice(0, 300));
-    return new Response('fire failed', { status: 502 });
-  }
+  const out = await wakeEverly(text);
+  if (!out.fired) return new Response('Everly did not wake: ' + out.why, { status: 503 });
   return new Response('Everly woken', { status: 200 });
 };
 

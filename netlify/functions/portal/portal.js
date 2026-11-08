@@ -39,6 +39,7 @@ const passcodes = require('./passcodes');
 const { handleForgot } = require('./forgot');
 const { renderRequestsPage, renderReviewPage, isVisible: boardVisible } = require('./requests-board');
 const filesStore = require('./files-store');
+const { wakeForPortal } = require('../lib/everly');
 const { renderFilesPage } = require('./files-page');
 const {
   cookieName,
@@ -191,6 +192,7 @@ exports.handler = async function (event) {
       }
       try {
         await saveBriefAnswers(client.slug, fields.answers, !!fields.submit);
+        if (fields.submit) await wakeForPortal(client.slug, 'brief-submitted');
         return json(200, { ok: true, submitted: !!fields.submit });
       } catch (err) {
         console.error('[portal] save-brief: ' + err.message);
@@ -220,6 +222,7 @@ exports.handler = async function (event) {
           return json(403, { ok: false, error: 'That step is not open yet.' });
         }
         await answersStore.saveCardAnswers(client.slug, fields.cardId, fields.answers, !!fields.submit);
+        if (fields.submit) await wakeForPortal(client.slug, 'onboarding-submitted', fields.cardId);
         return json(200, { ok: true, submitted: !!fields.submit });
       } catch (err) {
         console.error('[portal] save-onboarding: ' + err.message);
@@ -245,14 +248,17 @@ exports.handler = async function (event) {
         if (fields.action === 'request-add') {
           const upload = fields.image && typeof fields.image === 'object' ? fields.image : null;
           const item = await requestsStore.addRequest(client.slug, 'Sent from the portal', fields, upload);
+          await wakeForPortal(client.slug, 'request-add', item.id);
           return json(200, { ok: true, item: { id: item.id } });
         }
         if (fields.action === 'request-social') {
           const item = await requestsStore.addSocialPost(client.slug, 'Sent from the portal', fields);
+          await wakeForPortal(client.slug, 'request-social', item.id);
           return json(200, { ok: true, item: { id: item.id, title: item.title } });
         }
         if (fields.action === 'request-service') {
           const item = await requestsStore.addServiceRequest(client.slug, 'Sent from the portal', String(fields.service || ''), fields);
+          await wakeForPortal(client.slug, 'request-service', item.id);
           return json(200, { ok: true, item: { id: item.id, title: item.title } });
         }
         if (fields.action === 'request-attach') {
@@ -265,6 +271,7 @@ exports.handler = async function (event) {
         }
         if (fields.action === 'request-answer') {
           const item = await requestsStore.answerNeeds(client.slug, String(fields.id || ''), fields.kind, fields.text, fields.note);
+          await wakeForPortal(client.slug, 'request-answered', item.id);
           return json(200, { ok: true, item: { id: item.id } });
         }
         if (fields.action === 'review-save') {
@@ -273,9 +280,11 @@ exports.handler = async function (event) {
         }
         if (fields.action === 'review-submit') {
           const out = await requestsStore.submitReview(client.slug);
+          await wakeForPortal(client.slug, 'review-submitted');
           return json(200, { ok: true, count: out.count, summary: out.summary });
         }
         const item = await requestsStore.confirmRequest(client.slug, String(fields.id || ''), fields.answer, fields.note);
+        await wakeForPortal(client.slug, 'request-confirmed', item.id);
         return json(200, { ok: true, item: { id: item.id } });
       } catch (err) {
         const known = !!err.user;

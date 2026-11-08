@@ -16,10 +16,11 @@ Import this repository into Netlify (production branch `main`, deploy previews o
 | `RESEND_WEBHOOK_SECRET` | the signing secret of the Resend webhook below |
 | `EVERLY_FIRE_ID` | Everly's routine id (`trig_...`), or its full API trigger URL |
 | `EVERLY_TOKEN` | the token for that trigger |
+| `EVERLY_PORTAL_WAKES` | `on` to also wake Everly when a client acts in the portal (once Everly can read the portal) |
 
 ## Waking Everly
 
-In Melody's Resend account: Webhooks, Add webhook, URL `https://<portal address>/hooks/resend`, event `email.received`. Copy its signing secret into `RESEND_WEBHOOK_SECRET`. Use one webhook for this, so Everly wakes once per email.
+In Melody's Resend account: Webhooks, Add webhook, URL `https://<portal address>/hooks/resend`, event `email.received`. Copy its signing secret into `RESEND_WEBHOOK_SECRET`. Use one webhook for this, so Everly wakes once per email. Melody can also wake her by hand: Admin, Wake Everly.
 
 ## Checks
 

@@ -13,6 +13,7 @@
    ============================================================ */
 
 const crypto = require('crypto');
+const { wakeEverly } = require('../lib/everly');
 const { getAllClients, getClient, addClientToIndex, setClientEmails } = require('../portal/clients');
 const {
   getClientState,
@@ -173,6 +174,10 @@ exports.handler = async function (event) {
       if (body.action === 'unlock') {
         await setCardStatus(body.slug, body.cardId, 'in_progress', 'Unlocked by Melody: ' + body.note);
         return json(200, { ok: true, message: 'Unlocked ' + body.cardId + ' for ' + body.slug });
+      }
+      if (body.action === 'wake-everly') {
+        const out = await wakeEverly('Portal: Melody pressed Wake Everly' + (body.note ? '. Note: ' + String(body.note).slice(0, 300) : ''));
+        return json(out.fired ? 200 : 503, out.fired ? { ok: true, message: 'Everly is waking up.' } : { ok: false, error: 'Everly did not wake: ' + out.why + '.' });
       }
       if (body.action === 'activity') {
         await appendActivity(body.slug, body.text, body.cardId || null);

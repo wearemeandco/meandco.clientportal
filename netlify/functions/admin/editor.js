@@ -100,6 +100,14 @@ ${HEAD}
   </header>
   <main>
     <div class="add-client">
+      <h3>Everly</h3>
+      <form id="wake-everly-form">
+        <input type="text" name="note" placeholder="What should she look at? (optional)">
+        <button type="submit">Wake Everly</button>
+      </form>
+      <p class="note" id="wake-everly-note"></p>
+    </div>
+    <div class="add-client">
       <h3>+ Add a new client</h3>
       <form id="add-client-form">
         <input type="text" name="name" placeholder="Client name, e.g. Ana Ruiz" required>
@@ -155,6 +163,15 @@ ${HEAD}
           .then(function (r) { box.textContent = r.message || r.error || 'That did not work.'; })
           .catch(function () { box.textContent = 'That did not work.'; });
       });
+    });
+    document.getElementById('wake-everly-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var note = document.getElementById('wake-everly-note');
+      note.textContent = 'Waking...';
+      fetch('/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'wake-everly', note: e.target.note.value }) })
+        .then(function (r) { return r.json(); })
+        .then(function (r) { note.textContent = r.message || r.error || 'That did not work.'; if (r.ok) e.target.note.value = ''; })
+        .catch(function () { note.textContent = 'That did not work.'; });
     });
     document.getElementById('add-client-form').addEventListener('submit', function (e) {
       e.preventDefault();
