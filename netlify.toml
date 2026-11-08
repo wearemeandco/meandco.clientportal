@@ -1,0 +1,113 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+  # scripts/seed_blobs.js reads NETLIFY_SITE_ID from the environment rather than
+  # a literal, which is the real fix. This omit key is the safety net if a future
+  # script ever prints a non-secret build var and trips secrets scanning.
+  [build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "NETLIFY_SITE_ID"
+
+[functions]
+  included_files = ["data/clients/*.json", "data/clients-index.json", "data/requests/*.json", "data/files/*.json"]
+
+# Stage 2: the customised discovery brief, behind the portal session.
+# "brief" is a reserved card id, see BRIEF_SEGMENT in portal.js.
+[[redirects]]
+  from = "/portal/:slug/brief"
+  to = "/.netlify/functions/portal?slug=:slug&cardId=brief"
+  status = 200
+
+[[redirects]]
+  from = "/portal/:slug/file/:fileId"
+  to = "/.netlify/functions/portal?slug=:slug&fileId=:fileId"
+  status = 200
+
+[[redirects]]
+  from = "/onboarding-form/:slug/:cardId"
+  to = "/.netlify/functions/portal?slug=:slug&cardId=:cardId&form=1"
+  status = 200
+
+[[redirects]]
+  from = "/portal/:slug/:cardId"
+  to = "/.netlify/functions/portal?slug=:slug&cardId=:cardId"
+  status = 200
+
+[[redirects]]
+  from = "/portal/:slug"
+  to = "/.netlify/functions/portal?slug=:slug"
+  status = 200
+
+[[redirects]]
+  from = "/admin"
+  to = "/.netlify/functions/admin"
+  status = 200
+
+[[redirects]]
+  from = "/admin/*"
+  to = "/.netlify/functions/admin"
+  status = 200
+
+# Intake: the front door, the discovery brief, and the magic link.
+# Purely additive, every rule above is untouched, so /portal/:slug keeps
+# resolving to the existing gate exactly as before. Order matters in
+# this file: these sit last so nothing here can shadow a portal route.
+#
+# The root now serves the two-door entry page instead of the old
+# public/index.html, which only ever said "your portal lives at a
+# private link sent directly to you" and was a dead end for anyone new.
+# That file is left on disk, unreferenced, rather than deleted, so
+# reverting this is one commented-out rule. force is required because a
+# real public/index.html exists and a static file wins over a rewrite
+# without it.
+[[redirects]]
+  from = "/"
+  to = "/.netlify/functions/intake"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/start"
+  to = "/.netlify/functions/intake"
+  status = 200
+
+# Stage 1, the short inquiry. There is deliberately no public /discovery
+# route: the thirteen section brief is stage 2, behind the portal gate at
+# /portal/:slug/brief, selected per client after the real call. A stranger
+# gets the two minute inquiry and a booking link, nothing longer.
+[[redirects]]
+  from = "/start/inquiry"
+  to = "/.netlify/functions/intake?inquiry=1"
+  status = 200
+
+[[redirects]]
+  from = "/login"
+  to = "/.netlify/functions/intake?view=login"
+  status = 200
+
+[[redirects]]
+  from = "/magic/:ticket"
+  to = "/.netlify/functions/intake?view=magic&t=:ticket"
+  status = 200
+
+# Forgot passcode, and the link from its email to set a new one.
+[[redirects]]
+  from = "/forgot"
+  to = "/.netlify/functions/intake?view=forgot"
+  status = 200
+
+[[redirects]]
+  from = "/reset/:k"
+  to = "/.netlify/functions/intake?view=reset&k=:k"
+  status = 200
+
+# Sign out: clears the portal session cookies and shows the signed out page.
+[[redirects]]
+  from = "/signout"
+  to = "/.netlify/functions/intake?view=signout"
+  status = 200
+
+# Leave a review: the public link for anyone, client or not. No sign in.
+[[redirects]]
+  from = "/review"
+  to = "/.netlify/functions/intake?view=review"
+  status = 200

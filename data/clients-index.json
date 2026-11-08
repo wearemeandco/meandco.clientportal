@@ -1,0 +1,12 @@
+{
+  "sample": {
+    "envKey": "PORTAL_PASSWORD_SAMPLE",
+    "name": "Casa Luz Wellness (sample)",
+    "email": "sample@example.com",
+    "emails": ["sample@example.com"],
+    "kicker": "Your Me&Co. portal",
+    "blurb": "Everything for your project lives here. Enter the passcode Melody sent you.",
+    "repeatClient": false,
+    "welcomeName": "Ana"
+  }
+}

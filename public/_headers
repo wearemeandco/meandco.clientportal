@@ -1,0 +1,34 @@
+# A client portal has no business in a search index. robots.txt asks politely,
+# this tells a crawler that fetched a page anyway not to keep it.
+/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+
+# Client documents must never sit in a shared cache.
+#
+# Found 2026-08-24 during a security review, and it is subtle: the edge
+# function that gates these paths sets no-store on the responses IT returns,
+# but a 200 cached at the edge BEFORE the gate existed was still being served
+# straight from Netlify's CDN, with Cache-Status "Netlify Edge; hit" and a TTL
+# of roughly a year. The gate never ran for those requests. A real signed
+# contract was readable with a plain curl and no cookie.
+#
+# Setting it here, at the static layer, means a 200 for one of these paths can
+# never be cached again by anyone, so the gate cannot be skipped by a cache
+# entry that predates it or outlives a deploy.
+/contracts/*
+  Cache-Control: private, no-store, max-age=0, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/invoices/*
+  Cache-Control: private, no-store, max-age=0, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/receipts/*
+  Cache-Control: private, no-store, max-age=0, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/proposals/*
+  Cache-Control: private, no-store, max-age=0, must-revalidate
+  X-Robots-Tag: noindex, nofollow, noarchive

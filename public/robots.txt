@@ -1,0 +1,9 @@
+# portal.weareme.co is a client portal, not a website.
+# Nothing here should ever appear in a search result.
+#
+# Michelle 2026-08-24: "clients portal should also not be available to be
+# indexed." Added after client contracts, invoices and receipts were found
+# readable without a login. Those are gated now, and this is the second
+# layer: even a link that escapes should not become a search result.
+User-agent: *
+Disallow: /

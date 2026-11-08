@@ -1,0 +1,189 @@
+{
+  "_readme": [
+    "The shape every client portal starts as. Copy to data/clients/<slug>.json,",
+    "replace anything in ANGLE BRACKETS, delete cards the project does not have,",
+    "then push it to Blobs, which is the copy clients actually read:",
+    "  netlify blobs:set clients <slug> --input data/clients/<slug>.json",
+    "",
+    "Written 2026-08-25 after CBC's portal was built by hand and drifted out of",
+    "date four separate ways in eleven days. Every card here exists because a",
+    "real client needed it, and the wording is taken from portals that worked.",
+    "",
+    "Two rules that are not optional:",
+    "",
+    "1. A card item is a PROMISE TO THE CLIENT. If it says we need something",
+    "   from them, it must stop saying that the moment they send it. See",
+    "   docs/sop-client-answered-something.md.",
+    "2. checklist is a list of things we still need. Delete it from any item",
+    "   marked complete, or the item contradicts itself on the page.",
+    "",
+    "Also add the client to data/clients-index.json and set their passcode env",
+    "var, PORTAL_PASSWORD_<NAME>, in the PRODUCTION context. A portal with no",
+    "passcode set looks finished and lets nobody in. CBC's sat like that for ten",
+    "days with the passcode already emailed to five people."
+  ],
+
+  "slug": "<slug>",
+  "name": "<Client Legal Name>",
+  "repeatClient": false,
+  "paidUpfrontProjects": [],
+
+  "cards": [
+    {
+      "id": "project1-discovery",
+      "project": "Project 1, <Project Name>",
+      "label": "Discovery",
+      "status": "not_started",
+      "locked": false,
+      "description": "What we learned about your business, and what you told us you need.",
+      "items": []
+    },
+    {
+      "id": "project1-proposal",
+      "project": "Project 1, <Project Name>",
+      "label": "Proposal",
+      "status": "not_started",
+      "locked": false,
+      "description": "What we are building, what it costs, and how long it takes.",
+      "items": []
+    },
+    {
+      "id": "project1-contract",
+      "project": "Project 1, <Project Name>",
+      "label": "Contract",
+      "status": "not_started",
+      "locked": false,
+      "description": "Your agreement is ready. Open it, read it through, and the Sign button is on the document itself. Anything you want changed, just say.",
+      "items": [
+        {
+          "id": "contract-draft",
+          "type": "link",
+          "embed": true,
+          "title": "Your agreement",
+          "status": "not_started",
+          "description": "The full text, exactly as you will sign it. The Sign button is on the document.",
+          "url": "/contracts/<slug>-project1-msa.html",
+          "notes": ""
+        },
+        {
+          "id": "contract-sign",
+          "type": "link",
+          "embed": false,
+          "title": "Sign the contract",
+          "status": "not_started",
+          "description": "Your details are already filled in. You add your business address, then sign. Michelle countersigns after you and your signed copy comes back here.",
+          "url": "<per-signer DocuSeal link, https://docuseal.com/s/...>",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "project1-invoice",
+      "project": "Project 1, <Project Name>",
+      "label": "Payments",
+      "status": "not_started",
+      "locked": false,
+      "description": "$<DEPOSIT> is due on signing, before work begins. The remaining $<BALANCE> is due at launch. Hosting is included and there is no recurring cost to us.",
+      "_description_rule": "ONE amount at a time, never the project total. Michelle 2026-08-20 on an invoice showing the whole ledger: it looks like he needs to pay me 2000 again.",
+      "items": [
+        {
+          "id": "payment-invoice",
+          "type": "link",
+          "embed": true,
+          "title": "Invoice <MS-2026-XXX>",
+          "status": "not_started",
+          "description": "$<DEPOSIT> deposit, due on signing.",
+          "url": "/invoices/<slug>-project1.html",
+          "notes": ""
+        },
+        {
+          "id": "payment-how-to-pay",
+          "type": "note",
+          "status": "not_started",
+          "title": "How to pay",
+          "content": "<p><strong>Zelle</strong> is simplest and costs you nothing extra. Send to <strong>908 906 1745</strong> and put <strong>&lt;MS-2026-XXX&gt;</strong> in the memo so we can match it to your invoice.</p><p><strong>Card</strong>, if that is easier. The processor charges 2.99% plus $0.49, which is their fee rather than ours, and it is the only reason Zelle is cheaper.</p>",
+          "_fee_rule": "2.99% + $0.49 is PayPal's real published US rate. It is NOT 4%. That wrong number was live on CBC's portal and in the invoice template until 2026-08-25.",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "project1-onboarding-questions",
+      "project": "Project 1, <Project Name>",
+      "label": "Onboarding",
+      "status": "not_started",
+      "locked": true,
+      "_locked_rule": "Unlocks when the deposit clears. Nobody starts onboarding for free.",
+      "description": "What we need from you to get started.",
+      "items": [
+        {
+          "id": "onboarding-accounts",
+          "type": "note",
+          "status": "not_started",
+          "title": "Accounts to set up, all in your name",
+          "content": "<p>These are created in your name, not ours, so you own every one of them and could hand this to any developer later.</p>",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "project1-deliverables",
+      "project": "Project 1, <Project Name>",
+      "label": "Deliverables",
+      "status": "not_started",
+      "locked": true,
+      "description": "Everything we are building, and where each piece is up to.",
+      "items": []
+    },
+    {
+      "id": "project1-offboarding",
+      "project": "Project 1, <Project Name>",
+      "label": "Offboarding",
+      "status": "not_started",
+      "locked": true,
+      "description": "Handover. Passwords, documentation, and a recorded walkthrough so your team can run this without us.",
+      "items": []
+    },
+    {
+      "id": "meeting-notes",
+      "project": "All projects",
+      "label": "Meeting Notes",
+      "status": "not_started",
+      "locked": false,
+      "description": "What we agreed, each time we spoke.",
+      "items": []
+    }
+  ],
+
+  "activity": [],
+  "onboardingAnswers": {},
+
+  "_workingNotes_readme": [
+    "How this client works with us. Internal: the portal renderer never",
+    "touches this key, so none of it reaches the page. Write it as though",
+    "they will read it anyway. Operational facts in neutral language, never",
+    "a judgment about a person, what they are willing to pay, or how",
+    "sensible their idea is.",
+    "",
+    "Filled from three places, in this order: the working-preference",
+    "question in the Discovery Intake, what Michelle says about them, and",
+    "the mail record itself. Every field is optional and an empty block",
+    "beats a guessed one.",
+    "",
+    "ideaBacklog state is evidence, not intention. delivered means the",
+    "thing exists and we can point at it. quoted means a real number went",
+    "to them in writing. discussed means it was raised and nothing was",
+    "promised. Everything else is not started.",
+    "",
+    "Full rule: plugins/mora-studios/knowledge/client-working-notes.md in",
+    "morastudios-workflow."
+  ],
+  "workingNotes": {
+    "howTheyReachUs": "",
+    "howTheyDecide": "",
+    "whatTheyExpectFromUs": "",
+    "watchFor": "",
+    "ideaBacklog": [],
+    "updated": ""
+  }
+}

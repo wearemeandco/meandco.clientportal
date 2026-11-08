@@ -1,0 +1,17 @@
+{
+  "name": "meandco-portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Me&Co. client portal: per-client dashboards, request board, proposals and onboarding, backed by Netlify Blobs. Wakes Everly on new mail.",
+  "scripts": {
+    "brand": "node scripts/verify-brand.js",
+    "preview": "node scripts/render-preview.js",
+    "check": "node scripts/render-preview.js && node scripts/verify-brand.js && node scripts/verify-documents-gate.mjs && node scripts/verify-everly-wake.mjs",
+    "invite": "node scripts/verify-invite.js",
+    "wake": "node scripts/verify-everly-wake.mjs"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "docx": "^9.7.1"
+  }
+}

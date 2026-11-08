@@ -1,0 +1,26 @@
+// Checks the wake hook: a bad signature is refused, mail for someone else is
+// ignored, and mail for Everly fires her routine with a one-line pointer.
+import crypto from 'node:crypto';
+const secretRaw = crypto.randomBytes(24).toString('base64');
+process.env.RESEND_WEBHOOK_SECRET = 'whsec_' + secretRaw;
+process.env.EVERLY_ROUTINE_URL = 'https://example.test/fire';
+process.env.EVERLY_ROUTINE_TOKEN = 'test-token';
+const fired = [];
+globalThis.fetch = async (url, init) => { fired.push({ url, init }); return new Response('{}', { status: 200 }); };
+const { default: hook } = await import('../netlify/functions/hook-resend/hook-resend.mjs');
+const sign = (body, ts = Math.floor(Date.now() / 1000)) => {
+  const id = 'msg_test';
+  const sig = crypto.createHmac('sha256', Buffer.from(secretRaw, 'base64')).update(`${id}.${ts}.${body}`).digest('base64');
+  return { 'svix-id': id, 'svix-timestamp': String(ts), 'svix-signature': 'v1,' + sig };
+};
+const req = (body, headers) => new Request('https://x/hooks/resend', { method: 'POST', body, headers });
+let fail = 0; const check = (name, ok) => { console.log((ok ? '  ok    ' : '  FAIL  ') + name); if (!ok) fail++; };
+const forEverly = JSON.stringify({ type: 'email.received', data: { email_id: 'abc', from: 'melody@weareme.co', to: ['everly@admin.weareme.co'], subject: 'Hi' } });
+check('bad signature is refused', (await hook(req(forEverly, { 'svix-id': 'x', 'svix-timestamp': String(Math.floor(Date.now() / 1000)), 'svix-signature': 'v1,nope' }))).status === 401);
+check('old timestamp is refused', (await hook(req(forEverly, sign(forEverly, 1000)))).status === 401);
+const other = JSON.stringify({ type: 'email.received', data: { email_id: 'z', from: 'a@b.c', to: ['hello@weareme.co'], subject: 'x' } });
+check('mail for someone else is ignored', (await hook(req(other, sign(other)))).status === 200 && fired.length === 0);
+const r = await hook(req(forEverly, sign(forEverly)));
+check('mail for Everly fires her routine', r.status === 200 && fired.length === 1);
+check('payload is a one-line pointer', JSON.parse(fired[0].init.body).text === 'Resend: email received abc from melody@weareme.co subject Hi');
+console.log(fail ? `\n${fail} failed` : '\nall passed'); process.exit(fail ? 1 : 0);

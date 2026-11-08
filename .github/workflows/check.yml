@@ -1,0 +1,34 @@
+name: Portal checks
+
+# Runs on every pull request and every push to main. The brand guard and the
+# invite check need no installed packages, so the job is plain Node.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Brand guard (colors, corners, fonts, status chips)
+        run: node scripts/verify-brand.js
+      - name: Every portal page loads
+        run: |
+          MORA_PORTAL_LOCAL_DATA=1 node -e "
+          const {getClient}=require('./netlify/functions/portal/clients.js');
+          const {getRequests}=require('./netlify/functions/portal/requests-store.js');
+          const {getClientState}=require('./netlify/functions/portal/blobs.js');
+          const {renderDashboard}=require('./netlify/functions/portal/dashboard.js');
+          const {renderRequestsPage}=require('./netlify/functions/portal/requests-board.js');
+          (async()=>{for(const s of ['sample']){
+            const c=await getClient(s); const st=await getClientState(s); const r=await getRequests(s);
+            if(!c||!st) throw new Error('missing '+s);
+            renderDashboard(c,st,r); renderRequestsPage(c,r,{}); console.log('ok',s);
+          }})().catch(e=>{console.error(e);process.exit(1)});"
+      - name: Everly wake hook
+        run: node scripts/verify-everly-wake.mjs
