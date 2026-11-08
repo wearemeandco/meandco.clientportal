@@ -39,37 +39,9 @@ const { makeMagicToken } = require('../portal/session');
 const { sendInvite } = require('../portal/invite');
 const { addressesOnFile: forgotAddresses } = require('../portal/forgot');
 
-const COOKIE_NAME = 'mora_admin';
-const TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
+const adminAuth = require('../lib/admin-auth');
+const { COOKIE_NAME, safeEqual, makeToken, verifyToken, buildCookie } = adminAuth;
 
-function safeEqual(a, b) {
-  const ha = crypto.createHash('sha256').update(String(a), 'utf8').digest();
-  const hb = crypto.createHash('sha256').update(String(b), 'utf8').digest();
-  return crypto.timingSafeEqual(ha, hb);
-}
-function sign(payload, secret) {
-  return crypto.createHmac('sha256', secret).update(payload).digest('hex');
-}
-function makeToken(secret) {
-  const payload = Buffer.from(JSON.stringify({ e: Date.now() + TOKEN_TTL_MS })).toString('base64url');
-  return payload + '.' + sign(payload, secret);
-}
-function verifyToken(token, secret) {
-  if (!token) return false;
-  const dot = token.lastIndexOf('.');
-  if (dot < 1) return false;
-  const payload = token.slice(0, dot);
-  const mac = token.slice(dot + 1);
-  const expected = sign(payload, secret);
-  if (mac.length !== expected.length) return false;
-  if (!crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(expected))) return false;
-  try {
-    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-    return data && typeof data.e === 'number' && data.e > Date.now();
-  } catch (e) {
-    return false;
-  }
-}
 function readCookie(headers, name) {
   const raw = (headers && (headers.cookie || headers.Cookie)) || '';
   const parts = raw.split(';');
@@ -80,12 +52,6 @@ function readCookie(headers, name) {
   }
   return null;
 }
-function buildCookie(value, secure) {
-  const bits = [COOKIE_NAME + '=' + encodeURIComponent(value), 'Path=/', 'HttpOnly', 'SameSite=Lax'];
-  if (secure) bits.push('Secure');
-  return bits.join('; ');
-}
-
 const NO_STORE = { 'Cache-Control': 'no-store, private, max-age=0', 'X-Robots-Tag': 'noindex, nofollow' };
 function html(status, body, extra) {
   return { statusCode: status, headers: Object.assign({ 'Content-Type': 'text/html; charset=utf-8' }, NO_STORE, extra || {}), body };
@@ -148,11 +114,11 @@ function isInquiriesPath(event) {
 exports.handler = async function (event) {
   require('../portal/store').connectBlobs(event);
   require('../portal/files-store').connectBlobs(event);
-  const secret = process.env.ADMIN_PORTAL_PASSWORD;
+  const secret = adminAuth.signingSecret();
   const secure = String((event.headers && (event.headers['x-forwarded-proto'] || event.headers['X-Forwarded-Proto'])) || 'https').indexOf('https') !== -1;
 
   if (!secret) {
-    console.error('[admin] Missing ADMIN_PORTAL_PASSWORD env var.');
+    console.error('[admin] Missing ADMIN_PORTAL_PASSWORD (or MELODY_ADMIN) env var.');
     return html(503, '<p>Admin not configured.</p>');
   }
 
@@ -378,7 +344,7 @@ exports.handler = async function (event) {
     const fields = new URLSearchParams(event.body || '');
     const attempt = fields.get('passcode') || '';
     await new Promise((r) => setTimeout(r, 350));
-    if (!attempt || !safeEqual(attempt, secret)) {
+    if (!adminAuth.checkPassword(attempt)) {
       return html(401, loginPage('Wrong passcode.'));
     }
     const clients = await getAllClients();

@@ -8,7 +8,7 @@ Import this repository into Netlify (production branch `main`, deploy previews o
 
 | Name | What it is |
 | --- | --- |
-| `ADMIN_PORTAL_PASSWORD` | Melody's admin passcode |
+| `ADMIN_PORTAL_PASSWORD` | Melody's admin passcode (`MELODY_ADMIN` also works). She signs in at `/login` as melody@weareme.co with it, or at `/admin` |
 | `PORTAL_PUBLIC_ORIGIN` | the portal's address, like `https://portal.weareme.co` |
 | `RESEND_API_KEY` | sends portal email from Melody's Resend account |
 | `PORTAL_MAIL_FROM` | the sender, like `Me&Co. <hello@weareme.co>` |

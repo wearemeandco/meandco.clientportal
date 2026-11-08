@@ -54,6 +54,7 @@ const { renderReviewPage } = require('./review-page.js');
 const { stage } = require('./staging.js');
 const session = require('../portal/session.js');
 const passcodes = require('../portal/passcodes.js');
+const adminAuth = require('../lib/admin-auth.js');
 
 // A submission has to actually reach Everly. Not through Netlify Forms,
 // see intake-store.js's own reasoning for why that is the wrong tool
@@ -841,8 +842,17 @@ async function handlePasscodeLogin(event, body) {
   const attempt = typeof body.passcode === 'string' ? body.passcode : '';
   await new Promise((r) => setTimeout(r, 350));
 
-  const client = await findClientByEmail(email);
   const fail = json(401, { ok: false, error: 'That email and passcode did not match. Check both, or email ' + CONTACT_EMAIL + '.' });
+
+  // Melody signs in here too, with her admin passcode, and lands in admin.
+  if (adminAuth.isAdminEmail(email)) {
+    const adminSecret = adminAuth.signingSecret();
+    if (!adminSecret || !adminAuth.checkPassword(attempt)) return fail;
+    const adminCookie = adminAuth.buildCookie(adminAuth.makeToken(adminSecret), session.isSecureRequest(event));
+    return json(200, { ok: true, redirect: '/admin' }, { 'Set-Cookie': adminCookie });
+  }
+
+  const client = await findClientByEmail(email);
   if (!client) return fail;
 
   const auth = await passcodes.resolveAuth(client);
