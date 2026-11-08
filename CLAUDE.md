@@ -32,6 +32,7 @@ These wait for Melody's yes on that exact change, and her yes is enough:
 
 - Keys and passcodes live only in Netlify environment variables, typed in by Melody. Never in a file, a commit, a message or a log.
 - Never push to `main`, never force push, never delete a client's records.
+- Every push to `main` is a Netlify deploy, and every deploy spends Melody's Netlify credits. Batch finished changes into one merge, and push to `main` only to publish something she approved.
 - `scripts/seed_blobs.js` never runs against production.
 - Me&Co. colors only (navy #22315E, blue #2A4FBF, cream #FFFCF5, sand #EFE8DC, teal #6FAFA0, orange #E4572E, rose #D9A5A0), Fraunces for headings and DM Sans for text. The brand guard enforces it.
 - No em dashes anywhere. No colored stripe down one edge of any box: a box is set apart by its background and a hairline border on all four sides.
