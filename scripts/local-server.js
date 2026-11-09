@@ -36,8 +36,9 @@ if (fs.existsSync(envPath)) {
 const portal = require('../netlify/functions/portal/portal.js');
 const admin = require('../netlify/functions/admin/admin.js');
 const intake = require('../netlify/functions/intake/intake.js');
+const hookAgent = require('../netlify/functions/hook-agent/hook-agent.js');
 
-const PORT = 8787;
+const PORT = Number(process.env.PORT) || 8787;
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
 function toEvent(req, body) {
@@ -118,6 +119,11 @@ const server = http.createServer(async (req, res) => {
     }
     if (pathname === '/.netlify/functions/portal') {
       return sendResult(res, await portal.handler(event));
+    }
+    // The agent door, mirroring the /hooks/agent redirect in netlify.toml.
+    if (pathname === '/hooks/agent') {
+      event.path = pathname;
+      return sendResult(res, await hookAgent.handler(event));
     }
     // Stage 1, the public front door. Mirrors the /start redirects in
     // netlify.toml, so what runs here is what runs on the real deploy.

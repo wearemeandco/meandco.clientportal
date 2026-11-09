@@ -614,7 +614,37 @@ function counts(rec) {
   return c;
 }
 
+/* Removes a client's request board and every file uploaded under their slug,
+   board screenshots and files-and-links uploads alike. Counts without removing
+   when dryRun is set. Returns { requests, uploads }. */
+async function deleteClientRequests(slug, dryRun) {
+  if (!validSlug(slug)) throw new Error('Bad slug');
+  if (USE_LOCAL_FILES) {
+    const file = path.join(DATA_DIR, slug + '.json');
+    const hasBoard = fs.existsSync(file);
+    const dir = path.join(LOCAL_FILES_DIR, slug);
+    const names = fs.existsSync(dir) ? fs.readdirSync(dir) : [];
+    const uploads = names.filter((n) => !/\.meta\.json$/.test(n)).length;
+    if (!dryRun) {
+      if (hasBoard) fs.unlinkSync(file);
+      if (names.length) fs.rmSync(dir, { recursive: true, force: true });
+    }
+    return { requests: hasBoard ? 1 : 0, uploads };
+  }
+  const clients = openStore('clients');
+  const hasBoard = (await clients.get('requests/' + slug, { type: 'json' })) != null;
+  const files = openStore('request-files');
+  const listed = await files.list({ prefix: slug + '/' });
+  const keys = ((listed && listed.blobs) || []).map((b) => b.key);
+  if (!dryRun) {
+    if (hasBoard) await clients.delete('requests/' + slug);
+    for (const key of keys) await files.delete(key);
+  }
+  return { requests: hasBoard ? 1 : 0, uploads: keys.length };
+}
+
 module.exports = {
+  deleteClientRequests,
   PAGES,
   STATUSES,
   MAX_IMAGE_BYTES,

@@ -40,9 +40,19 @@ function readIndex() {
   return {};
 }
 
+/* Drops tombstoned entries: a deleted client that also lives in the code or
+   the bundled index is marked deleted in the dynamic index instead. */
+function withoutDeleted(all) {
+  const out = {};
+  Object.keys(all).forEach((slug) => {
+    if (!(all[slug] && all[slug].deleted)) out[slug] = all[slug];
+  });
+  return out;
+}
+
 async function getAllClients() {
   if (USE_LOCAL_FILES) {
-    return Object.assign({}, CLIENTS, readIndex());
+    return withoutDeleted(Object.assign({}, CLIENTS, readIndex()));
   }
   // Same read-through fallback as blobs.js getClientState, and for the
   // same reason: turning MORA_PORTAL_LOCAL_DATA off must not make CBC
@@ -61,7 +71,7 @@ async function getAllClients() {
   } catch (err) {
     console.error('[clients] Blobs index read failed, using bundled index: ' + err.message);
   }
-  return Object.assign({}, CLIENTS, fileIndex, dynamic);
+  return withoutDeleted(Object.assign({}, CLIENTS, fileIndex, dynamic));
 }
 
 async function addClientToIndex(slug, name, extra = {}) {
@@ -137,6 +147,76 @@ async function setClientEmails(slug, emails) {
   return list;
 }
 
+/* Writes one client's entry where addClientToIndex writes. A null entry
+   removes it: from the dynamic index when nothing in code or the bundled
+   index carries the slug, otherwise as a tombstone that hides it. */
+async function writeIndexEntry(slug, entry) {
+  if (USE_LOCAL_FILES) {
+    const index = readIndex();
+    if (entry === null) {
+      if (Object.prototype.hasOwnProperty.call(CLIENTS, slug)) index[slug] = { deleted: true };
+      else delete index[slug];
+    } else {
+      index[slug] = entry;
+    }
+    fs.mkdirSync(path.dirname(INDEX_PATH), { recursive: true });
+    fs.writeFileSync(INDEX_PATH, JSON.stringify(index, null, 2));
+    return;
+  }
+  let bundled = {};
+  try {
+    bundled = JSON.parse(fs.readFileSync(INDEX_PATH, 'utf8'));
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+  const { clientsStore } = require('./blobs');
+  const store = clientsStore();
+  const dynamic = (await store.get('_index', { type: 'json' })) || {};
+  if (entry === null) {
+    const inCode = Object.prototype.hasOwnProperty.call(CLIENTS, slug) || Object.prototype.hasOwnProperty.call(bundled, slug);
+    if (inCode) dynamic[slug] = { deleted: true };
+    else delete dynamic[slug];
+  } else {
+    dynamic[slug] = entry;
+  }
+  await store.setJSON('_index', dynamic);
+}
+
+/* Marks a client archived or active again, keeping every other field of its
+   entry. Returns the saved entry, or null when the slug is unknown. */
+async function setClientArchived(slug, archived) {
+  const all = await getAllClients();
+  if (!slug || !Object.prototype.hasOwnProperty.call(all, slug)) return null;
+  const entry = Object.assign({}, all[slug]);
+  if (archived) {
+    entry.archived = true;
+    entry.archivedAt = new Date().toISOString();
+  } else {
+    entry.archived = false;
+    delete entry.archivedAt;
+  }
+  await writeIndexEntry(slug, entry);
+  return entry;
+}
+
+/* Locks or unlocks a client's portal, keeping every other field of its entry.
+   Returns the saved entry, or null when the slug is unknown. */
+async function setClientLocked(slug, locked) {
+  const all = await getAllClients();
+  if (!slug || !Object.prototype.hasOwnProperty.call(all, slug)) return null;
+  const entry = Object.assign({}, all[slug], { locked: !!locked });
+  await writeIndexEntry(slug, entry);
+  return entry;
+}
+
+/* Removes a client's index entry. Returns true when the slug was known. */
+async function removeClientFromIndex(slug) {
+  const all = await getAllClients();
+  if (!slug || !Object.prototype.hasOwnProperty.call(all, slug)) return false;
+  await writeIndexEntry(slug, null);
+  return true;
+}
+
 async function getClient(slug) {
   if (!slug) return null;
   const merged = await getAllClients();
@@ -149,4 +229,4 @@ async function getClient(slug) {
   };
 }
 
-module.exports = { CLIENTS, ENV_PREFIX, getClient, getAllClients, addClientToIndex, setClientEmails, normalizeEmails };
+module.exports = { CLIENTS, ENV_PREFIX, getClient, getAllClients, addClientToIndex, setClientEmails, normalizeEmails, setClientArchived, setClientLocked, removeClientFromIndex };

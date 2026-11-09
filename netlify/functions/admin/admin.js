@@ -14,7 +14,7 @@
 
 const crypto = require('crypto');
 const { wakeEverly } = require('../lib/everly');
-const { getAllClients, getClient, addClientToIndex, setClientEmails } = require('../portal/clients');
+const { getAllClients, getClient, addClientToIndex, setClientEmails, setClientArchived, setClientLocked, normalizeEmails } = require('../portal/clients');
 const {
   getClientState,
   saveClientState,
@@ -37,6 +37,7 @@ const { saveFile } = require('../portal/files');
 const passcodes = require('../portal/passcodes');
 const { makeMagicToken } = require('../portal/session');
 const { sendInvite } = require('../portal/invite');
+const { sendClientMail } = require('../portal/client-mail');
 const { addressesOnFile: forgotAddresses } = require('../portal/forgot');
 
 const adminAuth = require('../lib/admin-auth');
@@ -146,6 +147,14 @@ async function sendAsk(slug, client, template, fields) {
 
 function isWorkflowPath(event) {
   return /\/admin\/workflows?$/.test((event.path || '').replace(/\/+$/, ''));
+}
+
+function isArchivedPath(event) {
+  return /\/admin\/archived$/.test((event.path || '').replace(/\/+$/, ''));
+}
+
+function isEverlyPath(event) {
+  return /\/admin\/everly$/.test((event.path || '').replace(/\/+$/, ''));
 }
 
 function isInquiriesPath(event) {
@@ -324,6 +333,32 @@ exports.handler = async function (event) {
         if (!saved) return json(404, { ok: false, error: 'No such client.' });
         return json(200, { ok: true, emails: saved });
       }
+      if (body.action === 'unlock-portal' || body.action === 'lock-portal') {
+        // Clears or sets the "being set up" page clients see. The admin view
+        // always shows the real portal.
+        const entry = await setClientLocked(String(body.slug || ''), body.action === 'lock-portal');
+        if (!entry) return json(404, { ok: false, error: 'No such client.' });
+        return json(200, { ok: true, locked: !!entry.locked, message: entry.locked ? 'Locked. Their portal shows the setting up page.' : 'Unlocked. Their portal is open to them.' });
+      }
+      if (body.action === 'archive-client' || body.action === 'unarchive-client') {
+        // Reversible: the portal closes (or reopens) and nothing is removed.
+        const entry = await setClientArchived(String(body.slug || ''), body.action === 'archive-client');
+        if (!entry) return json(404, { ok: false, error: 'No such client.' });
+        return json(200, { ok: true, archived: !!entry.archived, message: body.action === 'archive-client' ? 'Archived. Their portal is closed and nothing was removed.' : 'Unarchived. Their portal is open again.' });
+      }
+      if (body.action === 'delete-client') {
+        // Irreversible, and only for a client that is already archived. The
+        // typed confirmation must equal the client's display name exactly.
+        const slugD = String(body.slug || '');
+        const target = (await getAllClients())[slugD];
+        if (!target) return json(404, { ok: false, error: 'No such client.' });
+        if (!target.archived) return json(400, { ok: false, error: 'Archive this client first. Only an archived client can be deleted.' });
+        if (typeof body.confirm !== 'string' || body.confirm !== String(target.name || slugD)) {
+          return json(400, { ok: false, error: 'The name you typed does not match. Nothing was deleted.' });
+        }
+        const counts = await require('../portal/client-delete').deleteClientData(slugD);
+        return json(200, { ok: true, deleted: slugD, counts, message: 'Deleted ' + slugD + ' and all of its records.' });
+      }
       if (body.action === 'create-client') {
         const slug = String(body.slug || '')
           .toLowerCase()
@@ -333,9 +368,25 @@ exports.handler = async function (event) {
         if (!slug) return json(400, { ok: false, error: 'Give the client a name to slugify.' });
         const existing = await getAllClients();
         if (existing[slug]) return json(400, { ok: false, error: 'A client with that slug already exists.' });
+        // The add-a-client form sends each choice explicitly. A caller that
+        // names none keeps the original behaviour: portal created, invite
+        // sent when an address is on file.
+        const createPortal = body.createPortal !== false;
+        const lockPortal = body.locked === true;
+        const wantInvite = body.sendInvite === undefined ? true : body.sendInvite === true;
+        const wantBrief = body.sendBrief === true;
+        const wantCalendar = body.sendCalendar === true;
+        if (!createPortal && (wantBrief || (body.sendInvite === true))) {
+          return json(400, { ok: false, error: 'The invite and the brief go to a portal. Tick Create their portal, or untick them.' });
+        }
+        const addresses = normalizeEmails([].concat(body.emails || [], body.email ? [body.email] : []));
+        if (addresses.error) return json(400, { ok: false, error: addresses.error });
         const indexExtra = {};
-        if (body.email) indexExtra.email = body.email;
-        if (Array.isArray(body.emails) && body.emails.length) indexExtra.emails = body.emails;
+        if (addresses.list.length) { indexExtra.email = addresses.list[0]; indexExtra.emails = addresses.list; }
+        if (lockPortal) indexExtra.locked = true;
+        if (wantCalendar && !require('../portal/client-mail').bookingUrl()) {
+          return json(400, { ok: false, error: 'There is no booking link set for the calendar email.' });
+        }
         const entry = await addClientToIndex(slug, body.name || slug, indexExtra);
         // New client, not a repeat, starts at the guided sequence's entry
         // point: Discovery unlocked, everything after it locked until it
@@ -363,32 +414,40 @@ exports.handler = async function (event) {
           { id: 'project1-offboarding', project: 'Project 1', label: 'Offboarding', status: 'not_started', locked: true, lockRule: 'invoice', items: [] },
         ];
         const cards = Array.isArray(body.cards) && body.cards.length ? body.cards : defaultCards;
-        await saveClientState(slug, {
-          slug,
-          name: body.name || slug,
-          repeatClient: false,
-          paidUpfrontProjects: [],
-          cards,
-          activity: [],
-        });
-        // A client with an address gets the invite straight away, which also
-        // creates their passcode record. A failed invite never fails creation.
-        let message =
-          'Created ' +
-          slug +
-          '. One real step left: set ' +
-          entry.envKey +
-          ' in your environment (a real passcode, not created automatically).';
-        if (forgotAddresses(entry).length) {
+        if (createPortal) {
+          await saveClientState(slug, {
+            slug,
+            name: body.name || slug,
+            repeatClient: false,
+            paidUpfrontProjects: [],
+            cards,
+            activity: [],
+          });
+        }
+        // Each email that goes to the client is one the caller asked for. A
+        // failed send never fails creation.
+        const target = Object.assign({ slug }, entry);
+        const notes = [];
+        if (createPortal && wantInvite && forgotAddresses(entry).length) {
           try {
-            const invited = await sendInvite(Object.assign({ slug }, entry));
-            message = 'Created ' + slug + '. ' + inviteMessage(invited);
+            notes.push(inviteMessage(await sendInvite(target)));
           } catch (err) {
             console.error('[admin] invite after create-client failed: ' + err.message);
-            message = 'Created ' + slug + '. The invite could not be sent, see the function log. Use Send invite to try again.';
+            notes.push('The invite could not be sent, see the function log. Use Send invite to try again.');
           }
         }
-        return json(200, { ok: true, message });
+        for (const kind of [wantBrief ? 'brief' : '', wantCalendar ? 'calendar' : '']) {
+          if (!kind) continue;
+          try {
+            const r = await sendClientMail(target, kind);
+            notes.push(!r.total ? 'No email address on file for the ' + kind + ' email.' : (kind === 'brief' ? 'Brief' : 'Calendar invite') + ': ' + r.sent + ' sent' + (r.alreadySent ? ', ' + r.alreadySent + ' already sent' : '') + (r.failed ? ', ' + r.failed + ' could not be sent, see the function log' : '') + '.');
+          } catch (err) {
+            console.error('[admin] ' + kind + ' email after create-client failed: ' + err.message);
+            notes.push('The ' + kind + ' email could not be sent.');
+          }
+        }
+        const message = 'Created ' + slug + (lockPortal ? ' (portal locked)' : '') + '. ' + (notes.length ? notes.join(' ') : (createPortal ? 'No email was sent.' : 'No portal was created.'));
+        return json(200, { ok: true, slug, message });
       }
       return json(400, { ok: false, error: 'Unknown action' });
     } catch (err) {
@@ -436,9 +495,20 @@ exports.handler = async function (event) {
     return html(200, renderInquiryList(records));
   }
 
+  if (isEverlyPath(event)) {
+    const entries = await require('../portal/agent-log.js').listEntries(100);
+    return html(200, require('./everly.js').renderEverly(entries, Date.now()));
+  }
+
+  if (isArchivedPath(event)) return html(200, require('./home.js').renderArchivedList(await getAllClients()));
+
   const slug = getSlugFromPath(event);
   const clients = await getAllClients();
-  if (!slug) return html(200, require('./home.js').renderAdminHome(clients, await homeData(clients)));
+  if (!slug) {
+    const active = {};
+    Object.keys(clients).forEach((s) => { if (!clients[s].archived) active[s] = clients[s]; });
+    return html(200, require('./home.js').renderAdminHome(clients, await homeData(active)));
+  }
 
   const client = clients[slug];
   if (!client) return html(404, '<p>No such client.</p>');

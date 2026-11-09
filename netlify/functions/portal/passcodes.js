@@ -69,6 +69,7 @@ let storeFactory = function (name) {
     return {
       async read(key) { const all = readAll(); return Object.prototype.hasOwnProperty.call(all, key) ? all[key] : null; },
       async write(key, value) { const all = readAll(); all[key] = value; fs.writeFileSync(file, JSON.stringify(all)); },
+      async remove(key) { const all = readAll(); delete all[key]; fs.writeFileSync(file, JSON.stringify(all)); },
     };
   }
   return {
@@ -84,6 +85,7 @@ let storeFactory = function (name) {
       })) || null;
     },
     async write(key, value) { await tryEach(name, (st) => st.setJSON(key, value)); },
+    async remove(key) { await tryEach(name, (st) => st.delete(key)); },
   };
 };
 function _setStoreFactory(fn) { storeFactory = fn; }
@@ -198,7 +200,21 @@ async function noteForgotResult(slug, result) {
   }
 }
 
+/* Removes a client's passcode record and their forgot-passcode limit record.
+   Counts without removing when dryRun is set. */
+async function deleteClientPasscodes(slug, dryRun) {
+  let n = 0;
+  for (const name of [PASSCODE_STORE, LIMIT_STORE]) {
+    const store = storeFactory(name);
+    if ((await store.read(slug)) == null) continue;
+    n += 1;
+    if (!dryRun) await store.remove(slug);
+  }
+  return n;
+}
+
 module.exports = {
+  deleteClientPasscodes,
   noteForgotResult,
   PASSCODE_STORE,
   LIMIT_STORE,

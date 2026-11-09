@@ -128,4 +128,16 @@ async function withSecretRows(slug, rec) {
   return Object.assign({}, rec, { items: items.concat(rowsFor(slug, metas)) });
 }
 
-module.exports = { SecretError, allowed, saveSecret, getMeta, readSecret, deleteSecret, withSecretRows, STORE };
+/* Removes every stored secret and its meta record for a client. Counts
+   without removing when dryRun is set. A local run has no secrets store. */
+async function deleteClientSecrets(slug, dryRun) {
+  const onNetlify = !!(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
+  if (process.env.MORA_PORTAL_LOCAL_DATA && !onNetlify) return 0;
+  const store = openStore();
+  const listed = await store.list({ prefix: String(slug) + '/' });
+  const keys = ((listed && listed.blobs) || []).map((b) => b.key);
+  if (!dryRun) for (const key of keys) await store.delete(key);
+  return keys.length;
+}
+
+module.exports = { deleteClientSecrets, SecretError, allowed, saveSecret, getMeta, readSecret, deleteSecret, withSecretRows, STORE };
