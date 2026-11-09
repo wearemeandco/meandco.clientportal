@@ -17,7 +17,7 @@
 const crypto = require('crypto');
 
 const json = (code, obj) => ({ statusCode: code, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(obj) });
-const clean = (v, n) => String(v == null ? '' : v).replace(/—/g, ',').trim().slice(0, n);
+const clean = (v, n) => String(v == null ? '' : v).replace(/\u2014/g, ',').trim().slice(0, n);
 
 function authorized(event) {
   const want = String(process.env.EVERLY_AGENT_TOKEN || '');
