@@ -12,6 +12,8 @@ Import this repository into Netlify (production branch `main`, deploy previews o
 | `PORTAL_PUBLIC_ORIGIN` | the portal's address, like `https://portal.weareme.co` |
 | `RESEND_API_KEY` | sends portal email from Melody's Resend account |
 | `PORTAL_MAIL_FROM` | the sender, like `Me&Co. <hello@weareme.co>` |
+| `BOOKING_URL` | Melody's booking link (https), shown on the thank-you screen and in the confirmation email. Leave it unset and the email says Melody will reach out to set a time, with no button |
+| `CALLS_CLIENT_EMAILS` | `on` to hold one follow-up nudge in Resend for two days after a qualified inquiry (needs `BOOKING_URL`). Off by default |
 | `PORTAL_PASSWORD_<SLUG>` | one per client, their passcode |
 | `RESEND_WEBHOOK` | the signing secret of the Resend webhook below (whsec_...) |
 | `EVERLY_FIRE_ID` | Everly's routine id (`trig_...`), or its full API trigger URL |

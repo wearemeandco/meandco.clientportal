@@ -38,7 +38,8 @@
    A stage 1 inquiry sends one real internal email, Everly's own
    inbox cc Melody, so it reaches her hourly mail-triage the same
    way a client reply does. That happens for every submission,
-   qualified or not. Sign in emails (invite, confirm, password reset) are
+   qualified or not. A qualified one also gets the branded "We got your
+   request" confirmation from inquiry-mail.js. Sign in emails (invite, confirm, password reset) are
    sent by Netlify Identity itself, not from this code.
    ============================================================ */
 
@@ -47,6 +48,8 @@ const { STEP_STYLE, STEP_SCRIPT } = require('../portal/step-shell.js');
 const { getAllClients } = require('../portal/clients.js');
 const { saveIntakeRecord } = require('../portal/intake-store.js');
 const { renderEntryPage } = require('./entry-page.js');
+const inquiryMail = require('./inquiry-mail.js');
+const { composeRequestEmail } = require('./request-email.js');
 const { renderLoginPage } = require('./login-page.js');
 const resetPages = require('./reset-pages.js');
 const { handleForgot } = require('../portal/forgot.js');
@@ -62,10 +65,8 @@ const passcodes = require('../portal/passcodes.js');
 // Resend HTTP API, so a new inquiry reaches Everly's inbox the way a
 // client reply does. It is internal (Everly's own inbox, cc Melody),
 // never a client-facing send, so it does not touch the A5 approval path.
-// AI_LAB_SEND_PATH is the send path for sendBookingLink, the email to
-// the stranger.
-const AI_LAB_SEND_PATH = 'C:\\Users\\wande\\Desktop\\AI Lab\\lib\\resend.js';
-
+// The confirmation to the stranger is built in request-email.js and sent
+// by inquiry-mail.js.
 const DEFAULT_OLIVIA_FROM = 'Everly <everly@admin.weareme.co>';
 
 async function notifyEverlyOfInquiry(record, delivery) {
@@ -125,14 +126,10 @@ async function notifyEverlyOfInquiry(record, delivery) {
   }
 }
 
-/* The real, live Cal.com link off Melody's own account, 15 minutes.
-   One constant, one place to change.
-   OPEN QUESTION, not resolved: whether the discovery step should point
-   at Discovery Session or at the separate Intro Chat link
-   (/quick-chat). Discovery Session is used here because it is the one
-   named as the discovery-call link; swap this single string if she
-   says otherwise. */
-const BOOKING_URL = 'https://cal.com/morastudios/discovery-session';
+/* Melody's booking link comes from the BOOKING_URL environment variable,
+   read when needed. Unset, no link is shown or emailed and the confirmation
+   says Melody will reach out to set a time. */
+const bookingUrl = inquiryMail.bookingUrl;
 // The humans are gated. Every public-facing
 // fallback contact on the intake side routes through Everly, not
 // Melody directly, same principle as everywhere else in this system,
@@ -247,75 +244,7 @@ function qualifyInquiry(input) {
   return { passed: reasons.length === 0, reasons };
 }
 
-/* The confirmation. Fixed wording every single time, the only variable
-   parts being their own name and their own checklist answers read back
-   to them, which is why it carries a transactional action_type rather
-   than a client_email one: nothing here was drafted, and there is no
-   judgment in it for anyone to review.
-
-   Written against the live guards in lib/resend.js rather than hoping:
-   no spoken interaction is claimed (the honesty guard refuses "great
-   talking" and "the call" from an agent address, and this says
-   neither), nothing from Melody's private life appears, no dollar
-   figure appears, and no raw internal id appears. The one piece of
-   stranger-written text that reaches the body, their "something else"
-   answer, is flattened to a single capped line first. */
-function composeBookingEmail(record) {
-  const first = String(record.name || '').trim().split(/\s+/)[0];
-  const lines = [
-    'Hi ' + first + ',',
-    '',
-    'Thank you for reaching out to Me&Co.. Here is what you told us you need help with:',
-    '',
-  ]
-    .concat((record.needs || []).map((n) => '- ' + n))
-    .concat([
-      '',
-      'Here is the link to grab 15 minutes with Melody, at whatever time suits you:',
-      '',
-      BOOKING_URL,
-      '',
-      'Bring whatever you already have, a link, a sketch, a half finished thing, or nothing at all. That is genuinely enough to start from.',
-      '',
-      'Talk soon,',
-      'Me&Co.',
-      CONTACT_EMAIL,
-    ]);
-  return { subject: 'Your Me&Co. booking link', text: lines.join('\n') };
-}
-
-/* Same send path as Everly's notification, same require, same shape.
-   The difference is the recipient: this one leaves the building, so it
-   is A5 and lib/resend.js applies the full token rule to it. A refusal
-   there is not an error to route around, it is the system failing
-   closed, and it lands in exactly the same place a failed gate does:
-   the record stays flagged and a human sends the link. */
-function sendBookingLink(record, options) {
-  const opts = options || {};
-  let sendEmail;
-  try {
-    ({ sendEmail } = require(AI_LAB_SEND_PATH));
-  } catch (e) {
-    console.error('[intake] Could not load the AI Lab send path, no booking link went to ' + record.email + ': ' + e.message);
-    return Promise.resolve({ sent: false, reason: 'send path unavailable: ' + e.message });
-  }
-  const message = composeBookingEmail(record);
-  return sendEmail({
-    from: 'Me&Co. <everly@admin.weareme.co>',
-    to: record.email,
-    subject: message.subject,
-    text: message.text,
-    action_type: 'transactional.booking_link',
-    // A first contact with a stranger, never a reply into an open thread.
-    new_thread: true,
-    dry_run: !!opts.dryRun,
-  })
-    .then((result) => ({ sent: !opts.dryRun, dryRun: !!opts.dryRun, result, message }))
-    .catch((e) => {
-      console.error('[intake] ' + record.email + ' passed the gate but the send was refused: ' + e.message);
-      return { sent: false, reason: e.message, message };
-    });
-}
+const sendBookingLink = inquiryMail.sendBookingLink;
 
 function escapeHtml(str) {
   return String(str == null ? '' : str)
@@ -913,6 +842,8 @@ async function handleInquiry(body) {
       need: selections.join('; '),
       bookingLinkSent: !!delivery.sent,
       bookingLinkNote: delivery.sent ? '' : String(delivery.reason || ''),
+      // One nudge, held in Resend for two days, when client emails are on.
+      nudgeId: delivery.sent ? await inquiryMail.scheduleNudge(draft, Date.now()).catch(() => null) : null,
       stage: !gate.passed ? 'needs_review' : delivery.sent ? 'booking_link_sent' : 'booking_link_blocked',
     })
   );
@@ -932,7 +863,7 @@ async function handleInquiry(body) {
      submission the gate refused gets the same ok and id with no link, so
      a refused submission never receives a real calendar slot. */
   const reply = { ok: true, id: record.id };
-  if (gate.passed) reply.bookingUrl = BOOKING_URL;
+  if (gate.passed && bookingUrl()) reply.bookingUrl = bookingUrl();
   return json(200, reply);
 }
 
@@ -1010,12 +941,12 @@ exports.handler = async function (event, context) {
   return html(200, renderEntryPage());
 };
 
-module.exports.BOOKING_URL = BOOKING_URL;
+module.exports.bookingUrl = bookingUrl;
 module.exports.NEEDS = NEEDS;
 module.exports.NEED_IDS = NEED_IDS;
 /* Exported so the gate and the exact wording of the confirmation can be
    tested directly, with dry_run, without a browser and without sending
    anything. See scripts/verify-inquiry-gate.js. */
 module.exports.qualifyInquiry = qualifyInquiry;
-module.exports.composeBookingEmail = composeBookingEmail;
+module.exports.composeRequestEmail = composeRequestEmail;
 module.exports.sendBookingLink = sendBookingLink;
