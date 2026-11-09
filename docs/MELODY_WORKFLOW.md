@@ -85,6 +85,42 @@ How I'll know it works:
 | S6 | `EVERLY_PORTAL_WAKES = on` | Netlify, Environment variables |
 | S7 | Everly's connectors: Resend, Gmail, Kit, Airtable, Cloudinary, Google Drive, Google Calendar, Netlify | Everly's routine, Connectors |
 
+## The pieces, explained
+
+Three kinds of things make this run. Each one lives in a different place, and each is set up once.
+
+**Connectors (MCP).** A connector lets Everly use one of Melody's accounts, signed in as Melody, without ever holding a password. "MCP" is just the name of the plug they use. They are added in Claude: claude.ai, Settings, Connectors, then switched on for Everly's routine (claude.ai/code/routines, Everly, Connectors).
+
+| Connector | What Everly does with it |
+| --- | --- |
+| Resend | Reads mail that reaches everly@admin.weareme.co, sends replies and client emails, checks each send landed |
+| Gmail | Reads Melody's inbox for newsletter links and intake |
+| Kit | Builds the newsletter draft (never sends or schedules it) |
+| Airtable | Logs links, grants and Melody's Notes & Rules |
+| Cloudinary | Images for the site and the newsletter |
+| Google Drive, Google Calendar | Files, and what is on Melody's week |
+| Netlify | Reads what is deployed and whether a preview is ready |
+
+**Netlify settings (environment variables).** Settings the portal reads when it runs. Names only here, never values. They live in Netlify, project meandco-portal, Project configuration, Environment variables. Mark every key or password "Contains secret values".
+
+| Setting | What it does | Secret? |
+| --- | --- | --- |
+| `ADMIN_PORTAL_PASSWORD` | Melody's admin passcode | Yes |
+| `RESEND_API_KEY` | Lets the portal send email | Yes |
+| `PORTAL_MAIL_FROM` | Who client email comes from | No |
+| `PORTAL_PUBLIC_ORIGIN` | The portal's address, used in email links | No |
+| `BOOKING_URL` | Melody's booking link (Q1) | No |
+| `CALLS_CLIENT_EMAILS` | `on` turns on the 2 day nudge (Q4) | No |
+| `RESEND_WEBHOOK` | Proves a "mail arrived" message really came from Resend | Yes |
+| `EVERLY_FIRE_ID`, `EVERLY_TOKEN` | Let the portal wake Everly's routine | Yes |
+| `EVERLY_AGENT_TOKEN` | The key Everly uses to read and update the portal | Yes |
+| `EVERLY_PORTAL_WAKES` | `on` wakes Everly on portal changes too | No |
+| `PORTAL_PASSWORD_<BUSINESS>` | One passcode per business | Yes |
+
+**Everly's environment (in Claude).** Where her routine runs: claude.ai/code/routines, Everly, the environment under the Instructions box. Two things live there: the web addresses she may open (Network access, Custom: weareme.co, weareme.netlify.app, res.cloudinary.com, meandco-portal.netlify.app), and the portal key as a network secret (S4), which Claude adds to her calls so she never holds it.
+
+**How a wake happens, start to finish.** Mail reaches everly@admin.weareme.co. Resend tells the portal (`/hooks/resend`). The portal checks it really came from Resend (`RESEND_WEBHOOK`), then fires Everly's routine (`EVERLY_FIRE_ID`, `EVERLY_TOKEN`). Everly starts, reads the email through the Resend connector, and replies in the same run. A Settings request or an Ask tile follows the same path from the portal, with no email in between.
+
 ## Take over: instruction for the Claude session
 
 Paste everything below the line into a new session at claude.ai/code, signed in to the Claude account that owns Everly's routine, with `wearemeandco/everlyagent` and `wearemeandco/meandco.clientportal` attached.
