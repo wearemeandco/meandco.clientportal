@@ -107,6 +107,10 @@ function isBriefPath(event) {
   return /\/admin\/[^/]+\/brief$/.test((event.path || '').replace(/\/+$/, ''));
 }
 
+function isWorkflowPath(event) {
+  return /\/admin\/workflows?$/.test((event.path || '').replace(/\/+$/, ''));
+}
+
 function isInquiriesPath(event) {
   return /\/admin\/inquiries$/.test((event.path || '').replace(/\/+$/, ''));
 }
@@ -144,6 +148,11 @@ exports.handler = async function (event) {
       if (body.action === 'wake-everly') {
         const out = await wakeEverly('Portal: Melody pressed Wake Everly' + (body.note ? '. Note: ' + String(body.note).slice(0, 300) : ''));
         return json(out.fired ? 200 : 503, out.fired ? { ok: true, message: 'Everly is waking up.' } : { ok: false, error: 'Everly did not wake: ' + out.why + '.' });
+      }
+      if (body.action === 'build-request') {
+        const wf = require('./workflows.js');
+        try { return json(200, Object.assign({ ok: true }, await wf.sendBuildAsk(body, await getAllClients()))); }
+        catch (err) { return json(400, { ok: false, error: err.message }); }
       }
       if (body.action === 'activity') {
         await appendActivity(body.slug, body.text, body.cardId || null);
@@ -367,6 +376,11 @@ exports.handler = async function (event) {
       console.error('[admin] secret read failed');
       return { statusCode: 500, headers: Object.assign({ 'Content-Type': 'text/plain; charset=utf-8' }, NO_STORE), body: 'Could not read it.' };
     }
+  }
+
+  if (isWorkflowPath(event)) {
+    const wf = require('./workflows.js');
+    return html(200, wf.renderWorkflows(await getAllClients(), await wf.listAsks()));
   }
 
   if (isInquiriesPath(event)) {

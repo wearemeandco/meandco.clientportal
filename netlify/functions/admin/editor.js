@@ -96,7 +96,7 @@ ${HEAD}
   <header>
     <p class="kicker">Me&Co.</p>
     <h1>Clients</h1>
-    <p style="margin:0.6rem 0 0"><a class="back" href="/admin/inquiries">Inquiries and sign in links &rarr;</a></p>
+    <p style="margin:0.6rem 0 0"><a class="back" href="/admin/workflow">Your workflow &rarr;</a> &nbsp; <a class="back" href="/admin/inquiries">Inquiries and sign in links &rarr;</a></p>
   </header>
   <main>
     <div class="add-client">

@@ -111,3 +111,10 @@
   from = "/review"
   to = "/.netlify/functions/intake?view=review"
   status = 200
+
+# Everly's door: reads clients, inquiries and workflow asks, writes notes and statuses.
+[[redirects]]
+  from = "/hooks/agent"
+  to = "/.netlify/functions/hook-agent"
+  status = 200
+  force = true
