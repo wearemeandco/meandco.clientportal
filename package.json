@@ -6,9 +6,9 @@
   "scripts": {
     "brand": "node scripts/verify-brand.js",
     "preview": "node scripts/render-preview.js",
-    "check": "node scripts/render-preview.js && node scripts/verify-brand.js && node scripts/verify-documents-gate.mjs && node scripts/verify-everly-wake.mjs",
+    "check": "node scripts/render-preview.js && node scripts/verify-brand.js && node scripts/verify-documents-gate.mjs && node scripts/verify-everly-wake.mjs && node scripts/verify-everly-text.mjs",
     "invite": "node scripts/verify-invite.js",
-    "wake": "node scripts/verify-everly-wake.mjs"
+    "wake": "node scripts/verify-everly-wake.mjs && node scripts/verify-everly-text.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "^8.1.0",

@@ -16,6 +16,7 @@ Import this repository into Netlify (production branch `main`, deploy previews o
 | `CALLS_CLIENT_EMAILS` | `on` to hold one follow-up nudge in Resend for two days after a qualified inquiry (needs `BOOKING_URL`). Off by default |
 | `PORTAL_PASSWORD_<SLUG>` | one per client, their passcode |
 | `RESEND_WEBHOOK` | the signing secret of the Resend webhook below (whsec_...) |
+| `INKBOX_WEBHOOK_TOKEN` | a long random token, the same one set as the auth token on the Inkbox webhook below |
 | `EVERLY_FIRE_ID` | Everly's routine id (`trig_...`), or its full API trigger URL |
 | `EVERLY_TOKEN` | the token for that trigger |
 | `EVERLY_PORTAL_WAKES` | `on` to also wake Everly when a client acts in the portal (once Everly can read the portal) |
@@ -23,6 +24,8 @@ Import this repository into Netlify (production branch `main`, deploy previews o
 ## Waking Everly
 
 In Melody's Resend account: Webhooks, Add webhook, URL `https://<portal address>/hooks/resend`, event `email.received`. Copy its signing secret into `RESEND_WEBHOOK`. Use one webhook for this, so Everly wakes once per email. Melody can also wake her by hand: Admin, Wake Everly.
+
+Texts wake her the same way. In Inkbox, add a webhook subscription for Everly's identity: URL `https://<portal address>/hooks/inkbox`, events `imessage.received` and `text.received`, with an auth token. Put that token in `INKBOX_WEBHOOK_TOKEN`.
 
 ## Checks
 
