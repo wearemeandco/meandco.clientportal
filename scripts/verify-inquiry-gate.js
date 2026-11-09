@@ -225,8 +225,8 @@ async function main() {
   check('no booking link is returned', noLink.data.bookingUrl === undefined, JSON.stringify(noLink.data));
   recordFor(noLink.data.id);
   const adaMail = sends.slice(before).find((x) => x.body.to.indexOf('ada@example.org') !== -1);
-  check('the confirmation says Melody will reach out', /reach out to set a time/.test(adaMail.body.text));
-  check('the confirmation has no button and no calendar link', adaMail.body.html.indexOf('Book a time') === -1 && !/https?:\/\/(?!fonts\.googleapis\.com)/.test(adaMail.body.html));
+  check('the confirmation says Melody replies with a time to talk', /Either a time to talk/.test(adaMail.body.text));
+  check('the confirmation has no button and no calendar link', adaMail.body.html.indexOf('Book a time') === -1 && !/https?:\/\/(?!fonts\.googleapis\.com|weareme\.co|www\.instagram\.com\/weareme\.co)/.test(adaMail.body.html));
   check('no nudge is scheduled', sends.slice(before).every((x) => !x.body.scheduled_at));
   const bad = composeRequestEmail({ name: 'Sam', email: 'sam@example.org', needs: [] }, '');
   check('the send check passes the real email', require('../netlify/functions/intake/request-email.js').checkEmail(bad).length === 0);
