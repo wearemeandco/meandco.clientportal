@@ -82,6 +82,8 @@ function adminBarHtml(client) {
 body{padding-bottom:110px}
 .ab-top{max-width:1060px;margin:0 auto;padding:10px max(16px,env(safe-area-inset-left,0px));display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center}
 .ab-who{font-size:14px;color:var(--ink-soft)}
+.ab-back{min-height:38px;display:inline-flex;align-items:center;padding:0 14px;border-radius:var(--radius-pill);border:var(--rule);background:var(--white);color:var(--oxford);font:700 14px var(--display);text-decoration:none;box-shadow:var(--shadow-hard-sm)}
+.ab-back:hover{background:var(--lime)}
 .ab{position:static;border-bottom:var(--rule)}
 .ab-dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;gap:4px;padding:6px;border-radius:18px;background:var(--white);border:var(--rule);box-shadow:var(--shadow-hard-lg);width:min(520px,calc(100% - 24px))}
 .ab-dock a,.ab-dock button{flex:1;display:grid;justify-items:center;gap:2px;padding:8px 4px;border-radius:12px;border:0;background:transparent;color:var(--oxford);font:700 12.5px var(--sans);text-decoration:none;cursor:pointer}
@@ -94,7 +96,7 @@ body{padding-bottom:110px}
 .ab-done{margin:0;padding:10px 14px;border-radius:var(--radius-sm);background:var(--green-bg);color:var(--green);font-weight:700}
 </style>
 <div class="ab" role="region" aria-label="Admin view">
-  <div class="ab-top"><span class="ab-tag">Admin view</span><span class="ab-who">This is exactly what ${esc(first)} sees</span></div>
+  <div class="ab-top"><a class="ab-back" href="/admin">&larr; Back to my admin</a><span class="ab-tag">Admin view</span><span class="ab-who">This is exactly what ${esc(first)} sees</span></div>
   <div class="ab-sheet ab-panel" hidden><div class="ab-card">
     <button type="button" class="ab-x" aria-label="Close">×</button>
     <div class="ab-head"><h2>What do you need for ${esc(first)}?</h2>
