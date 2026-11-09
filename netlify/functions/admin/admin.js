@@ -186,6 +186,10 @@ exports.handler = async function (event) {
         const out = await wakeEverly('Portal: Melody pressed Wake Everly' + (body.note ? '. Note: ' + String(body.note).slice(0, 300) : ''));
         return json(out.fired ? 200 : 503, out.fired ? { ok: true, message: 'Everly is waking up.' } : { ok: false, error: 'Everly did not wake: ' + out.why + '.' });
       }
+      if (body.action === 'inkbox-connect') {
+        try { return json(200, Object.assign({ ok: true }, await require('../lib/inkbox.js').connect(process.env.PORTAL_PUBLIC_ORIGIN || ('https://' + (event.headers.host || 'meandco-portal.netlify.app'))))); }
+        catch (err) { return json(400, { ok: false, error: err.message }); }
+      }
       if (body.action === 'ask') {
         const clients = await getAllClients();
         const c = clients[body.slug];
