@@ -17,21 +17,21 @@ function steps() {
   const link = /^https:\/\//.test(env('BOOKING_URL'));
   const clientMail = env('CALLS_CLIENT_EMAILS').toLowerCase() === 'on';
   return [
-    { id: 'inquiry', e: '📝', name: 'They fill in the interest form', who: 'system', what: 'Seven quick questions. The portal checks it is a real person.', on: 'on' },
-    { id: 'got-it', e: '💌', name: '"Got it. ¡Gracias!" email', who: 'system', what: 'Goes right away, in your colors, with what they told you.', on: 'on' },
-    { id: 'book', e: '📅', name: 'They book a time with you', who: 'system', what: 'The book a time button in that email.', on: link ? 'on' : 'setup', why: link ? '' : 'Needs your booking link (BOOKING_URL)' },
-    { id: 'nudge', e: '🌿', name: 'Nudge if no booking in 2 days', who: 'system', what: 'One warm note. Booking a call cancels it.', on: link && clientMail ? 'on' : 'off', why: link && clientMail ? '' : 'Off until you ok the wording' },
-    { id: 'call', e: '☎️', name: 'The call', who: 'you', what: 'You talk. Tell Everly what you heard.', on: 'on' },
-    { id: 'proposal', e: '📄', name: 'Proposal built for them', who: 'ai', what: 'Everly drafts it with exact scope and pricing. You approve it.', on: 'on' },
-    { id: 'contract', e: '✍️', name: 'Agreement', who: 'you', what: 'You review and sign.', on: 'on' },
-    { id: 'payment', e: '💳', name: 'Payment', who: 'system', what: 'Stripe checkout, or you tell Everly it came in another way.', on: 'on' },
-    { id: 'onboarding', e: '🧩', name: 'Onboarding in their portal', who: 'system', what: 'Their questions, files and folders, saved as they go.', on: 'on' },
-    { id: 'work', e: '🛠', name: 'The work', who: 'ai', what: 'Everly runs the system with you. Ida builds what needs code.', on: 'on' },
-    { id: 'wrap', e: '🤍', name: 'Wrap and review', who: 'ai', what: 'Everything handed over, a thank you, one review ask.', on: 'on' },
+    { id: 'inquiry', tool: 'Portal form', e: '📝', name: 'They fill in the interest form', who: 'system', what: 'Seven quick questions. The portal checks it is a real person.', on: 'on' },
+    { id: 'got-it', tool: 'Resend', e: '💌', name: '"Got it. ¡Gracias!" email', who: 'system', what: 'Goes right away, in your colors, with what they told you.', on: 'on' },
+    { id: 'book', tool: 'Booking link', e: '📅', name: 'They book a time with you', who: 'system', what: 'The book a time button in that email.', on: link ? 'on' : 'setup', why: link ? '' : 'Needs your booking link (BOOKING_URL)' },
+    { id: 'nudge', tool: 'Resend', e: '🌿', name: 'Nudge if no booking in 2 days', who: 'system', what: 'One warm note. Booking a call cancels it.', on: link && clientMail ? 'on' : 'off', why: link && clientMail ? '' : 'Off until you ok the wording' },
+    { id: 'call', tool: 'Phone or video', e: '☎️', name: 'The call', who: 'you', what: 'You talk. Tell Everly what you heard.', on: 'on' },
+    { id: 'proposal', tool: 'Portal proposal', e: '📄', name: 'Proposal built for them', who: 'ai', what: 'Everly drafts it with exact scope and pricing. You approve it.', on: 'on' },
+    { id: 'contract', tool: 'Signing tool', e: '✍️', name: 'Agreement', who: 'you', what: 'You review and sign.', on: 'on' },
+    { id: 'payment', tool: 'Stripe', e: '💳', name: 'Payment', who: 'system', what: 'Stripe checkout, or you tell Everly it came in another way.', on: 'on' },
+    { id: 'onboarding', tool: 'Portal', e: '🧩', name: 'Onboarding in their portal', who: 'system', what: 'Their questions, files and folders, saved as they go.', on: 'on' },
+    { id: 'work', tool: 'Everly, Ida, GitHub', e: '🛠', name: 'The work', who: 'ai', what: 'Everly runs the system with you. Ida builds what needs code.', on: 'on' },
+    { id: 'wrap', tool: 'Resend, portal', e: '🤍', name: 'Wrap and review', who: 'ai', what: 'Everything handed over, a thank you, one review ask.', on: 'on' },
   ];
 }
 
-const WHO = { system: 'System', ai: 'Everly', you: 'You' };
+const WHO = { system: 'System', ai: 'Everly (AI)', ida: 'Ida (AI)', you: 'You', client: 'Client', other: 'Other' };
 const ON = { on: 'On', off: 'Off', setup: 'Needs setup' };
 
 async function listAsks() {
@@ -51,7 +51,8 @@ async function sendBuildAsk(body, clients) {
   const client = forWho !== 'all' && clients[forWho] ? clients[forWho].name : '';
   const at = new Date().toISOString();
   const id = 'wf-' + at.replace(/\D/g, '').slice(0, 14) + '-' + crypto.randomBytes(2).toString('hex');
-  const rec = { id, at, kind: step ? 'change' : 'new', step: step ? step.id : '', stepName: step ? step.name : '', forWho, client, what, done: String(body.done || '').trim().slice(0, 1000), status: 'sent' };
+  const who = Object.keys(WHO).indexOf(String(body.who)) !== -1 ? String(body.who) : '';
+  const rec = { id, at, kind: step ? 'change' : 'new', step: step ? step.id : '', stepName: step ? step.name : '', forWho, client, who, tool: String(body.tool || '').trim().slice(0, 120), what, done: String(body.done || '').trim().slice(0, 1000), status: 'sent' };
   await store().setJSON(id, rec);
   const { wakeEverly } = require('../lib/everly.js');
   const woke = await wakeEverly('Portal: Melody asked for a workflow change, ask ' + id + '. Read it with node tools/portal.mjs read workflow and hand it to Ida.');
@@ -66,7 +67,7 @@ function renderWorkflows(clients, asks) {
   const stepRows = list.map((s, i) => `<li class="wf-step">
       <span class="wf-n">${i + 1}</span>
       <span class="wf-e" aria-hidden="true">${s.e}</span>
-      <span class="wf-body"><b>${esc(s.name)}</b><span>${esc(s.what)}</span>${s.why ? `<em>${esc(s.why)}</em>` : ''}</span>
+      <span class="wf-body"><b>${esc(s.name)}</b><span>${esc(s.what)}</span><span class="wf-tool">🧰 ${esc(s.tool || '')}</span>${s.why ? `<em>${esc(s.why)}</em>` : ''}</span>
       <span class="wf-tags"><i class="who ${s.who}">${WHO[s.who]}</i><i class="st ${s.on}">${ON[s.on]}</i></span>
       <button type="button" class="wf-edit" data-step="${esc(s.id)}" data-name="${esc(s.name)}">Change</button>
     </li>`).join('');
@@ -91,12 +92,15 @@ body{padding-bottom:110px}
 .wf-body{display:grid;gap:2px;min-width:0}
 .wf-body b{font-family:var(--display);font-size:17px}
 .wf-body span{font-size:14px;color:var(--ink-soft)}
+.wf-tool{font-size:12.5px!important;color:var(--ink-faint)!important}
 .wf-body em{font-style:normal;font-size:13px;font-weight:700;color:var(--oxford)}
 .wf-tags{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
 .wf-tags i,.wf-asks i{font-style:normal;font:700 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:var(--radius-pill);white-space:nowrap}
 .who.system{background:var(--panel);color:var(--oxford)}
 .who.ai{background:var(--lavender);color:var(--oxford)}
 .who.you{background:var(--lime);color:var(--oxford)}
+.who.ida{background:var(--lavender);color:var(--oxford)}
+.who.client,.who.other{background:var(--panel-2);color:var(--oxford)}
 .st.on{background:var(--green-bg);color:var(--green)}
 .st.off{background:var(--panel-2);color:var(--ink-soft)}
 .st.setup{background:var(--lime);color:var(--oxford)}
@@ -137,11 +141,13 @@ body{padding-bottom:110px}
 </main>
 <div class="sheet" id="sheet" hidden>
   <form id="wf">
-    <span class="prog" id="prog">1 of 3</span>
+    <span class="prog" id="prog">1 of 5</span>
     <h2 id="title">Add a step or feature</h2>
     <label class="q" data-q="0">What should happen?<span class="hint">Say it like you would to a person.</span><textarea name="what" placeholder="My client needs a way to add images to their folders"></textarea></label>
-    <label class="q" data-q="1" hidden>Who is it for?<select name="forWho"><option value="all">Every client</option>${opts}</select></label>
-    <label class="q" data-q="2" hidden>How will you know it works?<span class="hint">Optional. One line is plenty.</span><textarea name="done" placeholder="I add a photo to a folder and it shows up in their portal"></textarea></label>
+    <label class="q" data-q="1" hidden>Who does this step?<span class="hint">You, an AI, the system on its own, the client, or someone else.</span><select name="who"><option value="">Not sure, Everly decides</option><option value="you">Me</option><option value="ai">Everly (AI)</option><option value="ida">Ida (AI, builds code)</option><option value="system">System (runs on its own)</option><option value="client">The client</option><option value="other">Someone else</option></select></label>
+    <label class="q" data-q="2" hidden>Which tool?<span class="hint">Optional. Like Canva, Stripe, Google Drive, the portal.</span><textarea name="tool" style="min-height:56px" placeholder="The portal"></textarea></label>
+    <label class="q" data-q="3" hidden>Who is it for?<select name="forWho"><option value="all">Every client</option>${opts}</select></label>
+    <label class="q" data-q="4" hidden>How will you know it works?<span class="hint">Optional. One line is plenty.</span><textarea name="done" placeholder="I add a photo to a folder and it shows up in their portal"></textarea></label>
     <p class="note" id="note" aria-live="polite"></p>
     <div class="row"><button type="button" class="back" id="back">Close</button><button type="button" class="next" id="next">Next &rarr;</button></div>
   </form>
@@ -172,7 +178,7 @@ body{padding-bottom:110px}
     note.textContent = '';
     if (at < qs.length - 1) { at++; show(); return; }
     next.disabled = true; note.textContent = 'Sending...';
-    fetch('/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'build-request', step: step, what: f.what.value, forWho: f.forWho.value, done: f.done.value }) })
+    fetch('/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'build-request', step: step, what: f.what.value, who: f.who.value, tool: f.tool.value, forWho: f.forWho.value, done: f.done.value }) })
       .then(function (r) { return r.json(); })
       .then(function (r) { next.disabled = false; if (!r.ok) throw new Error(r.error || 'That did not send.'); note.textContent = r.message; setTimeout(function () { location.reload(); }, 1400); })
       .catch(function (ex) { next.disabled = false; note.textContent = ex.message; });
