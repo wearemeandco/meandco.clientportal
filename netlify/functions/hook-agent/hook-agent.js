@@ -13,7 +13,9 @@
      { op: "ask-update", id, status, pr, preview, note }
                                                      status: sent, building, preview, live, declined
      { op: "note", slug, text }                      adds a line to the client's portal activity
-     { op: "inquiry-update", id, stage, note }        stage: contacted, call_booked, proposal, won, closed */
+     { op: "inquiry-update", id, stage, note }        stage: contacted, call_booked, proposal, won, closed
+     { op: "wake-ida", file, sha, summary }           wakes Ida's routine with a build request Everly
+                                                     already pushed: its path and commit in everlyagent */
 const crypto = require('crypto');
 
 const json = (code, obj) => ({ statusCode: code, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(obj) });
@@ -82,7 +84,13 @@ exports.handler = async function (event) {
       await st.setJSON(id, rec);
       return json(200, { ok: true, inquiry: { id, stage: rec.stage } });
     }
-    return json(400, { error: 'op is read, ask-update, note or inquiry-update' });
+    if (body.op === 'wake-ida') {
+      const file = clean(body.file, 200), sha = clean(body.sha, 60);
+      if (!/^docs\/builds\/[a-z0-9-]+\.md$/.test(file) || !/^[0-9a-f]{7,40}$/.test(sha)) return json(400, { error: 'file is docs/builds/<slug>.md and sha is its commit' });
+      const out = await require('../lib/everly.js').wakeIda('Everly: build request ' + file + ' at everlyagent commit ' + sha + '. ' + clean(body.summary, 600));
+      return json(out.fired ? 200 : 502, out.fired ? { woke: true } : { woke: false, why: out.why });
+    }
+    return json(400, { error: 'op is read, ask-update, note, inquiry-update or wake-ida' });
   } catch (err) {
     console.error('[hook-agent] ' + body.op + ' failed: ' + err.message);
     return json(/is one of|No ask|No inquiry|No portal/.test(err.message) ? 400 : 500, { error: err.message });

@@ -119,6 +119,7 @@ Three kinds of things make this run. Each one lives in a different place, and ea
 | `EVERLY_FIRE_ID`, `EVERLY_TOKEN` | Let the portal wake Everly's routine | Yes |
 | `EVERLY_AGENT_TOKEN` | The key Everly uses to read and update the portal | Yes |
 | `EVERLY_PORTAL_WAKES` | `on` wakes Everly on portal changes too | No |
+| `IDA_FIRE_ID`, `IDA_TOKEN` | Let Everly wake Ida's routine with a build | Yes |
 | `PORTAL_PASSWORD_<BUSINESS>` | One passcode per business | Yes |
 
 **Everly's environment (in Claude).** Where her routine runs: claude.ai/code/routines, Everly, the environment under the Instructions box. Two things live there: the web addresses she may open (Network access, Custom: weareme.co, weareme.netlify.app, res.cloudinary.com, meandco-portal.netlify.app), and the portal key as a network secret (S4), which Claude adds to her calls so she never holds it.
