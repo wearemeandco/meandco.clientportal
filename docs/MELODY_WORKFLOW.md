@@ -55,6 +55,38 @@ For: every client / <client name>
 How I'll know it works:
 ```
 
+## Archive, Delete and Add a business
+
+In the portal admin:
+
+- **Add a business** (on the Businesses tab) takes a name and an email, then boxes for what happens when you tap Create. **Create their portal** is on. **Locked portal** creates it but shows the client "Your portal is being set up" until you press **Unlock portal** on the business's Edit page (you always see the real portal). **Send the welcome invite**, **Send the brief** and **Calendar invite** (shown when `BOOKING_URL` is set) each email the client, are off until you tick them, and the line above Create lists exactly which emails will go ("This sends: invite, brief"). Each email goes once per business.
+- **Archive** (Edit page, or **Unarchive** from the **Archived (n)** link on Businesses) is reversible. An archived business disappears from the Businesses cards, and its portal shows "This portal is closed" with your email. Nothing is removed.
+- **Delete** is forever, only for an archived business, and only you can do it from the Edit page's **Danger zone**: type the business's name exactly, then **Delete forever**. It removes the portal, answers, files, requests, stored keys and passcode records for that business. Inquiries and other businesses are not touched. Everly cannot reach Delete.
+
+## The Everly tab
+
+**Everly** in the admin dock (Businesses, Everly, Settings, Inquiries) is the log of every run by Everly and Ida, newest first, grouped by day in Central time. Each entry shows who ran, what woke the run, what it did (with links as small buttons), and a highlighted **Waiting on you** box for anything that needs Melody. The line at the top reads like "Everly last ran 12 min ago, done". If Everly has not logged a run in 26 hours it says so, since she runs every morning.
+
+Everly and Ida write an entry at the end of each run with the `log` op below.
+
+## Everly's door
+
+`POST /hooks/agent` with `Authorization: Bearer <EVERLY_AGENT_TOKEN>` and a JSON body. Everly uses it through `node tools/portal.mjs`.
+
+| op | What it does |
+| --- | --- |
+| `read` `clients`, `client` (with `slug`), `inquiries`, `workflow`, `log` | Reads the businesses, one business's portal, the inquiries, the workflow asks, or the newest 50 log entries |
+| `note` (`slug`, `text`) | Adds a line to a business's portal activity |
+| `update-card` (`slug`, `cardId`, `fields`) | Changes a card's `status`, `description` or `label` |
+| `update-item` (`slug`, `cardId`, `itemId`, `fields`) | Changes an item's `title`, `description`, `status`, `notes`, `url` or `content` |
+| `add-item` (`slug`, `cardId`, `item`) | Adds a link, text or note item to a card |
+| `ask-update` (`id`, `status`, `pr`, `preview`, `note`) | Moves a workflow ask along |
+| `inquiry-update` (`id`, `stage`, `note`) | Moves an inquiry to contacted, call_booked, proposal, won or closed |
+| `wake-ida` (`file`, `sha`, `summary`) | Wakes Ida with a build request Everly already pushed |
+| `log` (`agent`, `woke`, `did`, `links`, `waiting`, `status`) | Writes one entry to the Everly tab. `agent` is everly or ida, `status` is done, waiting or blocked, `did`, `links` and `waiting` are lists of up to 12 lines of 300 characters, links are https. The newest 500 entries are kept |
+
+Card and item changes use the same store functions the admin does. The door never deletes or archives a business, sends email, or touches money, passcodes, locks or contracts, and it refuses writes to an archived business and to invoice or payment cards.
+
 ## Open questions
 
 ### For Melody to decide

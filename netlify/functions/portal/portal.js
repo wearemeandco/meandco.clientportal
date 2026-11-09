@@ -53,6 +53,7 @@ const {
   isSecureRequest,
 } = require('./session');
 const { isAdminRequest } = require('../admin/admin-session');
+const notices = require('./notices');
 const { withAdminBar } = require('../admin/admin-bar');
 
 const WRONG_PASSCODE_MESSAGE = 'That passcode did not work. Please check it and try again.';
@@ -155,6 +156,15 @@ exports.handler = async function (event) {
   const client = await getClient(slug);
   if (!client) return notFound();
 
+  /* An archived portal is closed and a locked one is still being set up.
+     Neither shows any data. A locked portal shows its real pages to the
+     signed-in admin. */
+  if (client.archived || (client.locked && !isAdminRequest(event))) {
+    const notice = client.archived ? notices.closedPage() : notices.settingUpPage();
+    const isGet = (event.httpMethod || 'GET').toUpperCase() === 'GET';
+    return html(isGet ? 200 : 403, notice);
+  }
+
   const secure = isSecureRequest(event);
   const name = cookieName(client.slug);
   const method = (event.httpMethod || 'GET').toUpperCase();
@@ -174,7 +184,9 @@ exports.handler = async function (event) {
   const auth = await passcodes.resolveAuth(client);
   const passcode = auth ? auth.secret : '';
 
-  if (!passcode) {
+  /* A portal with no passcode yet is shown to the signed-in admin, read only,
+     and to no one else. */
+  if (!passcode && !((event.httpMethod || 'GET').toUpperCase() === 'GET' && isAdminRequest(event))) {
     console.error('[portal] Missing environment variable ' + client.envKey + ' for slug "' + client.slug + '".');
     return html(503, '<!DOCTYPE html><meta charset="utf-8"><div style="font-family:sans-serif;padding:60px;text-align:center"><h1>This portal is not available yet</h1><p>Please contact melody@weareme.co.</p></div>');
   }
@@ -341,7 +353,7 @@ exports.handler = async function (event) {
      query (the token) to a bare path on a rewritten route, which loops. */
   const magic = (event.queryStringParameters && event.queryStringParameters.k) || '';
   /* Already signed in: serve the page as normal instead of redirecting again. */
-  if (magic && !verifySessionToken(readCookie(event.headers, name), client.slug, passcode)) {
+  if (passcode && magic && !verifySessionToken(readCookie(event.headers, name), client.slug, passcode)) {
     if (verifyMagicToken(magic, client.slug, passcode)) {
       return {
         statusCode: 302,
@@ -361,7 +373,7 @@ exports.handler = async function (event) {
   /* Melody, signed in to her admin, sees the page exactly as the client does,
      with her admin bar on top. Viewing only: every save still needs the
      client's own session. */
-  const clientSession = verifySessionToken(token, client.slug, passcode);
+  const clientSession = !!passcode && verifySessionToken(token, client.slug, passcode);
   const adminView = !clientSession && method === 'GET' && isAdminRequest(event);
   const page = (h) => (adminView ? withAdminBar(h, client) : h);
 

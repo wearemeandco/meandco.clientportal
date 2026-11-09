@@ -265,7 +265,25 @@ async function removeItem(slug, id, asAdmin) {
   return item;
 }
 
+/* Removes a client's files-and-links record. The uploads under their slug are
+   removed with the request board (deleteClientRequests). Counts without
+   removing when dryRun is set. */
+async function deleteClientFiles(slug, dryRun) {
+  if (!validSlug(slug)) throw new Error('Bad slug');
+  if (USE_LOCAL_FILES) {
+    const file = path.join(DATA_DIR, slug + '.json');
+    const present = fs.existsSync(file);
+    if (present && !dryRun) fs.unlinkSync(file);
+    return present ? 1 : 0;
+  }
+  const clients = openStore('clients');
+  const present = (await clients.get('files/' + slug, { type: 'json' })) != null;
+  if (present && !dryRun) await clients.delete('files/' + slug);
+  return present ? 1 : 0;
+}
+
 module.exports = {
+  deleteClientFiles,
   KINDS,
   KIND_KEYS,
   FILE_PREFIX,

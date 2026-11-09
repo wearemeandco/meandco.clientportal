@@ -385,6 +385,20 @@ ${HEAD}
   .signin-actions button:focus-visible, .signin-panel textarea:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
   .signin-status { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--blue-ink); margin: 0.6rem 0 0; min-height: 1.2rem; white-space: pre-wrap; }
 
+  .archive-panel { border: 2px solid var(--oxford); border-radius: 10px; background: var(--white); padding: 1rem 1.2rem 1.2rem; margin-bottom: 1rem; }
+  .archive-panel h2 { font-family: 'Fraunces', sans-serif; font-size: 1rem; margin: 0 0 0.4rem; color: var(--oxford); }
+  .archive-panel p { margin: 0 0 0.7rem; font-size: 0.9rem; }
+  .archive-panel button { min-height: 44px; font-family: 'Fraunces', sans-serif; font-weight: 700; font-size: 0.85rem; padding: 0.5rem 1.1rem; border-radius: 8px; cursor: pointer; border: 2px solid var(--oxford); background: var(--white); color: var(--oxford); }
+  .danger-zone { border: 1px solid #E4572E; border-radius: 10px; background: #EFE8DC; padding: 1rem 1.2rem 1.2rem; margin: 1.5rem 0 1rem; }
+  .danger-zone h2 { font-family: 'Fraunces', sans-serif; font-size: 1rem; margin: 0 0 0.4rem; color: var(--oxford); }
+  .danger-zone p { margin: 0 0 0.7rem; font-size: 0.9rem; }
+  .danger-zone label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; }
+  .danger-zone input { width: 100%; max-width: 28rem; min-height: 44px; box-sizing: border-box; font-size: 1rem; padding: 0.5rem 0.6rem; border: 1px solid #E4572E; border-radius: 6px; background: var(--white); color: var(--paper-ink); }
+  .danger-zone button { min-height: 44px; margin-top: 0.7rem; font-family: 'Fraunces', sans-serif; font-weight: 700; font-size: 0.85rem; padding: 0.5rem 1.1rem; border-radius: 8px; cursor: pointer; border: 2px solid #22315E; background: #22315E; color: var(--white); }
+  .danger-zone button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .archive-panel button:focus-visible, .danger-zone button:focus-visible, .danger-zone input:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .archive-status, .danger-status { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--blue-ink); margin: 0.6rem 0 0; min-height: 1.2rem; white-space: pre-wrap; }
+
   .save-indicator {
     position: fixed; bottom: 1.2rem; right: 1.2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.76rem;
     background: var(--oxford); color: var(--white); padding: 0.5rem 0.9rem; border-radius: 6px; opacity: 0; transition: opacity 0.2s ease;
@@ -400,6 +414,18 @@ ${HEAD}
     <p style="margin:0.6rem 0 0"><a class="back" href="/admin/${escapeHtml(client.slug)}/brief">Build this client's discovery brief &rarr;</a></p>
   </header>
   <main>
+    <section class="archive-panel" data-section="portal-lock">
+      <h2>${client.locked ? 'Portal is locked' : 'Portal is open'}</h2>
+      <p>${client.locked ? 'Their portal shows the "Your portal is being set up" page. You still see the real portal. Unlock lets them in.' : 'Lock puts the "Your portal is being set up" page in front of their portal. You still see the real portal.'}</p>
+      <button type="button" id="lock-toggle">${client.locked ? 'Unlock portal' : 'Lock portal'}</button>
+      <p class="archive-status" id="lock-status" aria-live="polite"></p>
+    </section>
+    <section class="archive-panel" data-section="archive">
+      <h2>${client.archived ? 'This client is archived' : 'Archive this client'}</h2>
+      <p>${client.archived ? 'Their portal is closed and shows a short notice. Nothing was removed. Unarchive opens it again.' : 'Closes their portal and hides them from your client list. Nothing is removed, and you can unarchive any time.'}</p>
+      <button type="button" id="archive-toggle">${client.archived ? 'Unarchive' : 'Archive'}</button>
+      <p class="archive-status" id="archive-status" aria-live="polite"></p>
+    </section>
     <section class="signin-panel" data-section="signin">
       <h2>Sign-in</h2>
       <label class="field-label" for="signin-emails">Email addresses, one per line</label>
@@ -411,6 +437,13 @@ ${HEAD}
       <p class="signin-status" id="signin-status" aria-live="polite"></p>
     </section>
     ${sections}
+    <section class="danger-zone" data-section="danger-zone">
+      <h2>Danger zone</h2>
+      ${client.archived
+        ? '<p>Deleting removes every record for this client for good: their portal, answers, files, requests and stored keys. It cannot be undone. Inquiries are not touched.</p><label for="delete-confirm">Type ' + escapeHtml(client.name) + ' to delete</label><input id="delete-confirm" type="text" autocomplete="off" spellcheck="false" aria-describedby="danger-status"><button type="button" id="delete-forever" disabled>Delete forever</button>'
+        : '<p>A client has to be archived before it can be deleted. Archive this client first.</p><button type="button" id="delete-forever" disabled>Delete forever</button>'}
+      <p class="danger-status" id="danger-status" aria-live="polite"></p>
+    </section>
   </main>
   <script>
   (function () {
@@ -441,6 +474,56 @@ ${HEAD}
         .then(function (r) { say(r.message || r.error || 'That did not work.'); })
         .catch(function () { say('That did not work.'); });
     });
+  })();
+  </script>
+  <script>
+  (function () {
+    var slug = ${JSON.stringify(client.slug)};
+    var clientName = ${JSON.stringify(client.name || client.slug)};
+    var archived = ${JSON.stringify(!!client.archived)};
+    function post(body) {
+      return fetch('/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json(); });
+    }
+    var toggle = document.getElementById('archive-toggle');
+    var aStatus = document.getElementById('archive-status');
+    toggle.addEventListener('click', function () {
+      aStatus.textContent = 'Saving...';
+      post({ action: archived ? 'unarchive-client' : 'archive-client', slug: slug })
+        .then(function (r) {
+          if (!r.ok) { aStatus.textContent = r.error || 'That did not work.'; return; }
+          location.reload();
+        })
+        .catch(function () { aStatus.textContent = 'That did not work.'; });
+    });
+    var locked = ${JSON.stringify(!!client.locked)};
+    var lockBtn = document.getElementById('lock-toggle');
+    var lockStatus = document.getElementById('lock-status');
+    lockBtn.addEventListener('click', function () {
+      lockStatus.textContent = 'Saving...';
+      post({ action: locked ? 'unlock-portal' : 'lock-portal', slug: slug })
+        .then(function (r) {
+          if (!r.ok) { lockStatus.textContent = r.error || 'That did not work.'; return; }
+          location.reload();
+        })
+        .catch(function () { lockStatus.textContent = 'That did not work.'; });
+    });
+    var input = document.getElementById('delete-confirm');
+    var del = document.getElementById('delete-forever');
+    var dStatus = document.getElementById('danger-status');
+    if (input) {
+      input.addEventListener('input', function () { del.disabled = input.value !== clientName; });
+      del.addEventListener('click', function () {
+        if (input.value !== clientName) return;
+        del.disabled = true;
+        dStatus.textContent = 'Deleting...';
+        post({ action: 'delete-client', slug: slug, confirm: input.value })
+          .then(function (r) {
+            if (!r.ok) { dStatus.textContent = r.error || 'That did not work.'; input.dispatchEvent(new Event('input')); return; }
+            location.href = '/admin';
+          })
+          .catch(function () { dStatus.textContent = 'That did not work.'; input.dispatchEvent(new Event('input')); });
+      });
+    }
   })();
   </script>
   <div class="save-indicator" id="save-indicator">Saved</div>

@@ -478,7 +478,22 @@ async function setChecklist(slug, cardId, itemId, checklist) {
   return saveClientState(slug, state);
 }
 
+/* Removes a client's portal state record. Counts it without removing when
+   dryRun is set. The copy bundled with a deploy is part of the code. */
+async function deleteClientState(slug, dryRun) {
+  if (USE_LOCAL_FILES) {
+    const present = fs.existsSync(localPath(slug));
+    if (present && !dryRun) fs.unlinkSync(localPath(slug));
+    return present ? 1 : 0;
+  }
+  const store = clientsStore();
+  const present = (await store.get(slug, { type: 'json' })) != null;
+  if (present && !dryRun) await store.delete(slug);
+  return present ? 1 : 0;
+}
+
 module.exports = {
+  deleteClientState,
   clientsStore,
   mergePublished,
   getClientState,

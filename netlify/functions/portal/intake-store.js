@@ -70,4 +70,32 @@ async function listIntakeRecords() {
   return records.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
-module.exports = { saveIntakeRecord, listIntakeRecords, intakeStore };
+const ID_RE = /^[a-z0-9][a-z0-9-]{0,80}$/i;
+
+/* One intake record by id, or null. */
+async function getIntakeRecord(id) {
+  if (!ID_RE.test(String(id))) return null;
+  if (USE_LOCAL_FILES) {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, id + '.json'), 'utf8'));
+    } catch (err) {
+      if (err.code === 'ENOENT') return null;
+      throw err;
+    }
+  }
+  return (await intakeStore().get(id, { type: 'json' })) || null;
+}
+
+/* Writes back a record read with getIntakeRecord. */
+async function putIntakeRecord(id, record) {
+  if (!ID_RE.test(String(id))) throw new Error('Not an inquiry id.');
+  if (USE_LOCAL_FILES) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(path.join(DATA_DIR, id + '.json'), JSON.stringify(record, null, 2));
+    return record;
+  }
+  await intakeStore().setJSON(id, record);
+  return record;
+}
+
+module.exports = { saveIntakeRecord, listIntakeRecords, intakeStore, getIntakeRecord, putIntakeRecord };

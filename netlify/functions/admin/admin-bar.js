@@ -109,6 +109,7 @@ body{padding-bottom:110px}
     <a href="/admin"><span aria-hidden="true">👥</span>Businesses</a>
     <button type="button" class="ab-ask" aria-expanded="false"><span aria-hidden="true">⚡</span>Ask</button>
     <a href="/admin/${esc(slug)}/edit"><span aria-hidden="true">✏️</span>Edit</a>
+    <a href="/admin/everly"><span aria-hidden="true">🤖</span>Everly</a>
     <a href="/admin/workflow"><span aria-hidden="true">⚙️</span>Settings</a>
     <a href="/admin/inquiries"><span aria-hidden="true">📥</span>Inquiries</a>
   </nav>

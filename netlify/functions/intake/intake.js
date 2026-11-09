@@ -641,6 +641,7 @@ async function findClientByEmail(email) {
   const slugs = Object.keys(all);
   for (let i = 0; i < slugs.length; i++) {
     const c = all[slugs[i]];
+    if (c.archived) continue;
     const addresses = [].concat(c.emails || [], c.email ? [c.email] : []).map((e) => String(e).toLowerCase());
     if (addresses.indexOf(needle) !== -1) return Object.assign({ slug: slugs[i] }, c);
   }

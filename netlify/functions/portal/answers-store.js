@@ -77,4 +77,20 @@ async function saveCardAnswers(slug, cardId, answers, submitted) {
   return record;
 }
 
-module.exports = { STORE, getCardAnswers, saveCardAnswers };
+/* Removes every saved answer record for a client. Counts without removing when
+   dryRun is set. */
+async function deleteClientAnswers(slug, dryRun) {
+  const prefix = String(slug) + '/';
+  if (USE_LOCAL_FILES) {
+    const keys = Array.from(memory.keys()).filter((k) => k.indexOf(prefix) === 0);
+    if (!dryRun) keys.forEach((k) => memory.delete(k));
+    return keys.length;
+  }
+  const store = openStore();
+  const listed = await store.list({ prefix });
+  const keys = ((listed && listed.blobs) || []).map((b) => b.key);
+  if (!dryRun) for (const key of keys) await store.delete(key);
+  return keys.length;
+}
+
+module.exports = { STORE, getCardAnswers, saveCardAnswers, deleteClientAnswers };

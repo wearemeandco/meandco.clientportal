@@ -159,7 +159,7 @@ body{padding-bottom:110px}
     <div class="row"><button type="button" class="back" id="back">Close</button><button type="button" class="next" id="next">Next &rarr;</button></div>
   </form>
 </div>
-<nav class="ab-dock" aria-label="Your tabs"><a href="/admin"><span aria-hidden="true">👥</span>Businesses</a><a class="on" href="/admin/workflow" aria-current="page"><span aria-hidden="true">⚙️</span>Settings</a><a href="/admin/inquiries"><span aria-hidden="true">📥</span>Inquiries</a></nav>
+<nav class="ab-dock" aria-label="Your tabs"><a href="/admin"><span aria-hidden="true">👥</span>Businesses</a><a href="/admin/everly"><span aria-hidden="true">🤖</span>Everly</a><a class="on" href="/admin/workflow" aria-current="page"><span aria-hidden="true">⚙️</span>Settings</a><a href="/admin/inquiries"><span aria-hidden="true">📥</span>Inquiries</a></nav>
 <script>
 (function () {
   var ib = document.getElementById('inkboxConnect');
