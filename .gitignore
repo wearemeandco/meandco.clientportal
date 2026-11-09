@@ -2,3 +2,4 @@ node_modules
 .preview
 .env
 .netlify
+data/staging/
