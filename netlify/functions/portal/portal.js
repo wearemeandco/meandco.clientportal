@@ -52,6 +52,8 @@ const {
   clearCookie,
   isSecureRequest,
 } = require('./session');
+const { isAdminRequest } = require('../admin/admin-session');
+const { withAdminBar } = require('../admin/admin-bar');
 
 const WRONG_PASSCODE_MESSAGE = 'That passcode did not work. Please check it and try again.';
 
@@ -356,8 +358,14 @@ exports.handler = async function (event) {
   }
 
   const token = readCookie(event.headers, name);
+  /* Melody, signed in to her admin, sees the page exactly as the client does,
+     with her admin bar on top. Viewing only: every save still needs the
+     client's own session. */
+  const clientSession = verifySessionToken(token, client.slug, passcode);
+  const adminView = !clientSession && method === 'GET' && isAdminRequest(event);
+  const page = (h) => (adminView ? withAdminBar(h, client) : h);
 
-  if (verifySessionToken(token, client.slug, passcode)) {
+  if (clientSession || adminView) {
     try {
       const fileId = getFileId(event);
       if (fileId) {
@@ -417,18 +425,18 @@ exports.handler = async function (event) {
         const boardRec = await clientSecrets.withSecretRows(client.slug, rec);
         const oneRaw = event.queryStringParameters && event.queryStringParameters.one;
         const one = /^\d{1,3}$/.test(String(oneRaw || '')) ? Number(oneRaw) : null;
-        return html(200, renderRequestsPage(client, boardRec, { banner: BOARD_MESSAGES.indexOf(msg) !== -1 ? msg : '', one }));
+        return html(200, page(renderRequestsPage(client, boardRec, { banner: BOARD_MESSAGES.indexOf(msg) !== -1 ? msg : '', one })));
       }
       if (cardId === FILES_SEGMENT) {
         const frec = await filesStore.getFiles(client.slug);
         if (!filesStore.isVisible(frec)) return notFound();
         const fmsg = (event.queryStringParameters && event.queryStringParameters.msg) || '';
-        return html(200, renderFilesPage(client, frec, { banner: FILES_MESSAGES.indexOf(fmsg) !== -1 ? fmsg : '' }));
+        return html(200, page(renderFilesPage(client, frec, { banner: FILES_MESSAGES.indexOf(fmsg) !== -1 ? fmsg : '' })));
       }
       if (cardId === REVIEW_SEGMENT) {
         const rec = await requestsStore.getRequests(client.slug);
         if (!boardVisible(rec)) return notFound();
-        return html(200, renderReviewPage(client, rec));
+        return html(200, page(renderReviewPage(client, rec)));
       }
       if (cardId === BRIEF_SEGMENT) {
         // Stage 2. Only the sections Melody selected for this client
@@ -455,8 +463,8 @@ exports.handler = async function (event) {
           const stored = await answersStore.getCardAnswers(client.slug, cardId);
           const savedAnswers = Object.assign({}, ((state.onboardingAnswers || {})[cardId] || {}).answers, stored && stored.answers);
           // A card with formStyle "stepped" gets one question per screen.
-          if (card.formStyle === 'stepped') return html(200, renderSteppedForm(client, card, savedAnswers));
-          return html(200, renderOnboardingForm(client, card, savedAnswers));
+          if (card.formStyle === 'stepped') return html(200, page(renderSteppedForm(client, card, savedAnswers)));
+          return html(200, page(renderOnboardingForm(client, card, savedAnswers)));
         }
         if (getFormat(event) === 'docx') {
           const buffer = await generateDocx(client, card);
@@ -472,7 +480,7 @@ exports.handler = async function (event) {
             isBase64Encoded: true,
           };
         }
-        return html(200, renderCardDetail(client, card));
+        return html(200, page(renderCardDetail(client, card)));
       }
       const requestsRec = await requestsStore.getRequests(client.slug).catch((err) => {
         console.error('[portal] requests read: ' + err.message);
@@ -483,7 +491,7 @@ exports.handler = async function (event) {
         console.error('[portal] files read: ' + err.message);
         return null;
       });
-      return html(200, renderDashboard(client, state, dashRec, filesRec));
+      return html(200, page(renderDashboard(client, state, dashRec, filesRec)));
     } catch (err) {
       console.error('[portal] ' + err.message);
       return html(500, '<!DOCTYPE html><meta charset="utf-8"><p>Portal temporarily unavailable.</p>');

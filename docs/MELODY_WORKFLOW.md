@@ -30,11 +30,11 @@ Every step a Me&Co. client goes through, who does it, what tool it runs on, and 
 | 11 | Onboarding in their portal | 👤 Client, ⚙️ System | Portal | Payment landed | Their questions, files and folders, saved as they go. | ✅ |
 | 12 | The work | 🤖 Everly, 🛠 Ida, 🙋 Melody | Everly, Ida, GitHub, Netlify | Onboarding done | Everly runs the system. Ida builds what needs code. Melody approves each preview. | ✅ |
 | 13 | Wrap and review | 🤖 Everly | Resend, portal | Work delivered | Everything handed over, a thank you, one review ask. | ❓ Q10 |
-| W | A change to this workflow | 🙋 Melody, then 🤖 Everly, then 🛠 Ida | Admin, Workflow tab | Melody taps Add a step | Everly wakes, hands it to Ida, Melody approves the preview, it goes live. | 🟡 In PR #3 |
+| W | A change to this workflow | 🙋 Melody, then 🤖 Everly, then 🛠 Ida | Admin, Settings | Melody taps Request a change, or Add a feature on a business | Everly wakes, hands it to Ida, Melody approves the preview, it goes live. | 🟡 In PR #3 |
 
 ## Add a step
 
-In the portal admin, open **Workflow**, then **＋ Add a step or feature**. It asks one thing at a time:
+In the portal admin, open **Settings**, then **＋ Request a change** (or, on one business, **Ask**, then **✨ Add a feature**). It asks one thing at a time:
 
 1. **What should happen?** In your own words. ("My client needs a way to add images to their folders.")
 2. **Who does this step?** Me, Everly (AI), Ida (AI), System, The client, or Someone else.
