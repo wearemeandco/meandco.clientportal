@@ -64,4 +64,18 @@ function portalPointer(slug, action, id) {
   return 'Portal: ' + clip(slug, 60) + ' ' + clip(action, 40) + (id ? ' ' + clip(id, 80) : '');
 }
 
-module.exports = { wakeEverly, wakeForPortal, portalPointer, fireUrl };
+/* Wakes Ida's routine with a build Everly handed her. Same API trigger
+   mechanism as Everly's, with IDA_FIRE_ID and IDA_TOKEN. */
+async function wakeIda(text) {
+  const url = fireUrl(process.env.IDA_FIRE_ID);
+  const token = process.env.IDA_TOKEN;
+  if (!url || !token) return { fired: false, why: 'IDA_FIRE_ID or IDA_TOKEN is not set' };
+  try {
+    const res = await fetch(url, { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'anthropic-beta': BETA, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' }, body: JSON.stringify({ text: clip(text, 4000) }) });
+    return res.ok ? { fired: true } : { fired: false, why: 'routine answered ' + res.status };
+  } catch (err) {
+    return { fired: false, why: err.message };
+  }
+}
+
+module.exports = { wakeEverly, wakeIda, wakeForPortal, portalPointer, fireUrl };

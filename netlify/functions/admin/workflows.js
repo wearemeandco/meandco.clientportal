@@ -61,7 +61,9 @@ async function sendBuildAsk(body, clients) {
   return { id, message: rec.status === 'sent' ? 'Sent. Everly hands it to Ida, and the preview comes to you.' : 'Saved here. Everly picks it up on her next run.' };
 }
 
-function renderWorkflows(clients, asks) {
+function renderWorkflows(clients, asks, textLast) {
+  const textConnected = !!(process.env.INKBOX_API_KEY && process.env.EVERLY_INKBOX_IDENTITY_ID && process.env.MELODY_PHONE);
+  const textStatus = !textConnected ? 'Not set up yet: needs INKBOX_API_KEY, EVERLY_INKBOX_IDENTITY_ID and MELODY_PHONE in Netlify.' : textLast ? 'Last text: ' + new Date(textLast.at).toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' · ' + textLast.why : 'Settings are in. No text has arrived yet.';
   const list = steps();
   const opts = Object.keys(clients).map((s) => `<option value="${esc(s)}">${esc(clients[s].name || s)}</option>`).join('');
   const stepRows = list.map((s, i) => `<li class="wf-step">
@@ -110,6 +112,9 @@ body{padding-bottom:110px}
 .wf-asks li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--white);border:1px solid var(--panel-2);font-size:14.5px}
 .wf-asks li i{margin-left:auto}
 .wf-none{color:var(--ink-faint)}
+.wf-text{display:grid;gap:10px;padding:16px;border-radius:var(--radius);background:var(--white);border:var(--rule)}
+.wf-text .wf-edit{grid-column:auto}
+.wf-text-note{font-size:14px;color:var(--ink-soft)}
 .sheet{position:fixed;inset:0;z-index:80;display:grid;align-items:end;justify-items:center;background:rgba(10,35,66,.35)}
 .sheet[hidden]{display:none!important}
 .sheet form{width:min(560px,100%);margin:0 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom,0px));border-radius:22px 22px 0 0;background:var(--white);border:var(--rule);display:grid;gap:12px}
@@ -138,6 +143,8 @@ body{padding-bottom:110px}
   <ol class="wf-list">${stepRows}</ol>
   <p class="wf-sec">Your requests</p>
   <ul class="wf-asks">${askRows}</ul>
+  <p class="wf-sec">Texting Everly</p>
+  <div class="wf-text"><span>💬 Text Everly from your phone, like texting a teammate. Connect once after the three texting settings are in Netlify.</span><button type="button" class="wf-edit" id="inkboxConnect">Connect texting</button><span class="wf-text-note" id="inkboxNote" aria-live="polite">${esc(textStatus)}</span></div>
 </main>
 <div class="sheet" id="sheet" hidden>
   <form id="wf">
@@ -154,6 +161,15 @@ body{padding-bottom:110px}
 </div>
 <nav class="ab-dock" aria-label="Your tabs"><a href="/admin"><span aria-hidden="true">👥</span>Businesses</a><a class="on" href="/admin/workflow" aria-current="page"><span aria-hidden="true">⚙️</span>Settings</a><a href="/admin/inquiries"><span aria-hidden="true">📥</span>Inquiries</a></nav>
 <script>
+(function () {
+  var ib = document.getElementById('inkboxConnect');
+  if (ib) ib.addEventListener('click', function () {
+    var n = document.getElementById('inkboxNote'); n.textContent = 'Connecting...';
+    fetch('/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'inkbox-connect' }) })
+      .then(function (r) { return r.json(); }).then(function (r) { n.textContent = r.ok ? 'Connected. Text Everly to try it.' : r.error; })
+      .catch(function () { n.textContent = 'That did not connect. Try again in a minute.'; });
+  });
+})();
 (function () {
   var sheet = document.getElementById('sheet'), f = document.getElementById('wf'), qs = f.querySelectorAll('.q'), at = 0, step = '';
   var next = document.getElementById('next'), back = document.getElementById('back'), note = document.getElementById('note');

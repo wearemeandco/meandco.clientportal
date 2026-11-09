@@ -83,7 +83,10 @@ How I'll know it works:
 | S4 | The same key as a network secret: host `meandco-portal.netlify.app`, header `Authorization`, value `Bearer <key>` | Everly's routine, environment settings, Network secrets |
 | S5 | Allowed domain `meandco-portal.netlify.app` | Everly's routine, environment, Network access, Custom |
 | S6 | `EVERLY_PORTAL_WAKES = on` | Netlify, Environment variables |
-| S7 | Everly's connectors: Resend, Gmail, Kit, Airtable, Cloudinary, Google Drive, Google Calendar, Netlify | Everly's routine, Connectors |
+| S7 | Everly's connectors: Resend, Gmail, Kit, Airtable, Cloudinary, Google Drive, Google Calendar, Netlify, Inkbox | Everly's routine, Connectors |
+| S8 | Texting: an Inkbox identity for Everly with iMessage turned on (inkbox.ai, Identities, New) | Melody's Inkbox account |
+| S9 | Texting: `INKBOX_API_KEY`, `EVERLY_INKBOX_IDENTITY_ID` (the identity's id), `MELODY_PHONE` (like +15125550123) | Netlify, meandco-portal, Environment variables |
+| S10 | Texting: press **Connect texting**, then text Everly "hi" from Melody's phone | Portal admin, Settings |
 
 ## The pieces, explained
 
@@ -100,6 +103,7 @@ Three kinds of things make this run. Each one lives in a different place, and ea
 | Cloudinary | Images for the site and the newsletter |
 | Google Drive, Google Calendar | Files, and what is on Melody's week |
 | Netlify | Reads what is deployed and whether a preview is ready |
+| Inkbox | Everly's own iMessage line: reads Melody's texts and texts her back |
 
 **Netlify settings (environment variables).** Settings the portal reads when it runs. Names only here, never values. They live in Netlify, project meandco-portal, Project configuration, Environment variables. Mark every key or password "Contains secret values".
 
@@ -115,11 +119,12 @@ Three kinds of things make this run. Each one lives in a different place, and ea
 | `EVERLY_FIRE_ID`, `EVERLY_TOKEN` | Let the portal wake Everly's routine | Yes |
 | `EVERLY_AGENT_TOKEN` | The key Everly uses to read and update the portal | Yes |
 | `EVERLY_PORTAL_WAKES` | `on` wakes Everly on portal changes too | No |
+| `IDA_FIRE_ID`, `IDA_TOKEN` | Let Everly wake Ida's routine with a build | Yes |
 | `PORTAL_PASSWORD_<BUSINESS>` | One passcode per business | Yes |
 
 **Everly's environment (in Claude).** Where her routine runs: claude.ai/code/routines, Everly, the environment under the Instructions box. Two things live there: the web addresses she may open (Network access, Custom: weareme.co, weareme.netlify.app, res.cloudinary.com, meandco-portal.netlify.app), and the portal key as a network secret (S4), which Claude adds to her calls so she never holds it.
 
-**How a wake happens, start to finish.** Mail reaches everly@admin.weareme.co. Resend tells the portal (`/hooks/resend`). The portal checks it really came from Resend (`RESEND_WEBHOOK`), then fires Everly's routine (`EVERLY_FIRE_ID`, `EVERLY_TOKEN`). Everly starts, reads the email through the Resend connector, and replies in the same run. A Settings request or an Ask tile follows the same path from the portal, with no email in between.
+**How a wake happens, start to finish.** Mail reaches everly@admin.weareme.co. Resend tells the portal (`/hooks/resend`). The portal checks it really came from Resend (`RESEND_WEBHOOK`), then fires Everly's routine (`EVERLY_FIRE_ID`, `EVERLY_TOKEN`). Everly starts, reads the email through the Resend connector, and replies in the same run. A Settings request or an Ask tile follows the same path from the portal, with no email in between. A text works the same way: Melody texts Everly's iMessage line, Inkbox tells the portal (`/hooks/inkbox`), the portal checks the delivery and that it came from `MELODY_PHONE`, then wakes Everly, who reads it and texts back through her Inkbox connector.
 
 ## Take over: instruction for the Claude session
 

@@ -118,3 +118,10 @@
   to = "/.netlify/functions/hook-agent"
   status = 200
   force = true
+
+# Everly's text line: Melody's texts to Everly, from Inkbox.
+[[redirects]]
+  from = "/hooks/inkbox"
+  to = "/.netlify/functions/hook-inkbox"
+  status = 200
+  force = true
