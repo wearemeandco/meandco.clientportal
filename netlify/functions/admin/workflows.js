@@ -73,7 +73,7 @@ function renderWorkflows(clients, asks) {
     </li>`).join('');
   const askRows = asks.length ? asks.slice(0, 12).map((a) => `<li><b>${esc(a.stepName || 'New')}</b> ${esc(a.what.length > 110 ? a.what.slice(0, 110) + '...' : a.what)}<i class="st ${a.status === 'live' ? 'on' : a.status === 'sent' || a.status === 'building' || a.status === 'preview' || a.status === 'saved' ? 'setup' : 'off'}">${esc({ sent: 'With Everly', building: 'Ida is building', preview: 'Preview ready', live: 'Live', saved: 'Waiting for Everly' }[a.status] || a.status)}</i></li>`).join('') : '<li class="wf-none">Nothing asked yet. Anything you add shows here with where it is.</li>';
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">
-<title>Your workflow · Me&amp;Co.</title>
+<title>Settings · Me&amp;Co.</title>
 ${FONT_LINK}
 <style>
 ${TOKENS}
@@ -132,17 +132,17 @@ body{padding-bottom:110px}
 @media (max-width:560px){.wf-step{grid-template-columns:26px 1fr auto}.wf-e{display:none}.wf-edit{grid-column:2 / -1}}
 </style></head><body>
 <main class="ad">
-  <header class="ad-head"><h1>Your workflow</h1><p>Every step a client goes through. Change one, or ask for something new. Everly hands it to Ida, and you approve the preview.</p></header>
-  <button type="button" class="wf-add" data-step="" data-name=""><span aria-hidden="true">＋</span><span>Add a step or feature<small>Like "my client needs a way to add images to their folders"</small></span></button>
-  <p class="wf-sec">The steps</p>
+  <header class="ad-head"><h1>Settings</h1><p>Your workflow, every step a client goes through, and requests for changes. Change a step or ask for something new: Everly hands it to Ida, and you approve the preview.</p></header>
+  <button type="button" class="wf-add" data-step="" data-name=""><span aria-hidden="true">＋</span><span>Request a change<small>A new step, a feature, or a change to your admin or portal. Like "my client needs a way to add images to their folders"</small></span></button>
+  <p class="wf-sec">Your workflow</p>
   <ol class="wf-list">${stepRows}</ol>
-  <p class="wf-sec">What you asked for</p>
+  <p class="wf-sec">Your requests</p>
   <ul class="wf-asks">${askRows}</ul>
 </main>
 <div class="sheet" id="sheet" hidden>
   <form id="wf">
     <span class="prog" id="prog">1 of 5</span>
-    <h2 id="title">Add a step or feature</h2>
+    <h2 id="title">Request a change</h2>
     <label class="q" data-q="0">What should happen?<span class="hint">Say it like you would to a person.</span><textarea name="what" placeholder="My client needs a way to add images to their folders"></textarea></label>
     <label class="q" data-q="1" hidden>Who does this step?<span class="hint">You, an AI, the system on its own, the client, or someone else.</span><select name="who"><option value="">Not sure, Everly decides</option><option value="you">Me</option><option value="ai">Everly (AI)</option><option value="ida">Ida (AI, builds code)</option><option value="system">System (runs on its own)</option><option value="client">The client</option><option value="other">Someone else</option></select></label>
     <label class="q" data-q="2" hidden>Which tool?<span class="hint">Optional. Like Canva, Stripe, Google Drive, the portal.</span><textarea name="tool" style="min-height:56px" placeholder="The portal"></textarea></label>
@@ -152,7 +152,7 @@ body{padding-bottom:110px}
     <div class="row"><button type="button" class="back" id="back">Close</button><button type="button" class="next" id="next">Next &rarr;</button></div>
   </form>
 </div>
-<nav class="ab-dock" aria-label="Your tabs"><a href="/admin"><span aria-hidden="true">👥</span>Clients</a><a class="on" href="/admin/workflow" aria-current="page"><span aria-hidden="true">⚙️</span>Workflow</a><a href="/admin/inquiries"><span aria-hidden="true">📥</span>Inquiries</a></nav>
+<nav class="ab-dock" aria-label="Your tabs"><a href="/admin"><span aria-hidden="true">👥</span>Businesses</a><a class="on" href="/admin/workflow" aria-current="page"><span aria-hidden="true">⚙️</span>Settings</a><a href="/admin/inquiries"><span aria-hidden="true">📥</span>Inquiries</a></nav>
 <script>
 (function () {
   var sheet = document.getElementById('sheet'), f = document.getElementById('wf'), qs = f.querySelectorAll('.q'), at = 0, step = '';
@@ -167,7 +167,7 @@ body{padding-bottom:110px}
   document.querySelectorAll('[data-step]').forEach(function (b) {
     b.addEventListener('click', function () {
       step = b.getAttribute('data-step'); at = 0; f.reset(); note.textContent = '';
-      document.getElementById('title').textContent = step ? 'Change: ' + b.getAttribute('data-name') : 'Add a step or feature';
+      document.getElementById('title').textContent = step ? 'Change: ' + b.getAttribute('data-name') : 'Request a change';
       sheet.hidden = false; show();
     });
   });

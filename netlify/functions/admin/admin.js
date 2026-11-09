@@ -96,7 +96,7 @@ function loginPage(error) {
 
 function getSlugFromPath(event) {
   const p = (event.path || '').replace(/\/+$/, '');
-  const m = p.match(/\/admin\/([^/]+)(?:\/brief)?$/);
+  const m = p.match(/\/admin\/([^/]+)(?:\/(?:brief|edit))?$/);
   return m ? decodeURIComponent(m[1]) : (event.queryStringParameters && event.queryStringParameters.slug) || '';
 }
 
@@ -105,6 +105,43 @@ function getSlugFromPath(event) {
 function isBriefPath(event) {
   if (event.queryStringParameters && event.queryStringParameters.brief) return true;
   return /\/admin\/[^/]+\/brief$/.test((event.path || '').replace(/\/+$/, ''));
+}
+
+function isEditPath(event) {
+  return /\/admin\/[^/]+\/edit$/.test((event.path || '').replace(/\/+$/, ''));
+}
+
+/* Each business's card numbers for the home page: their portal state and requests. */
+async function homeData(clients) {
+  const rs = require('../portal/requests-store.js');
+  const data = {};
+  for (const slug of Object.keys(clients)) {
+    data[slug] = { state: await getClientState(slug).catch(() => null), requests: await rs.getRequests(slug).catch(() => null) };
+  }
+  return data;
+}
+
+/* An ask from the admin bar: saved on the business's record, then Everly is
+   woken with a pointer to it. A feature or portal change she hands to Ida.
+   A note is saved only. */
+async function sendAsk(slug, client, template, fields) {
+  const { ASK_TEMPLATES } = require('./admin-bar.js');
+  const rs = require('../portal/requests-store.js');
+  const t = ASK_TEMPLATES.find((x) => x.id === template);
+  if (!t) throw new Error('Pick one of the tiles.');
+  const clean = {};
+  for (const f of t.fields) clean[f.k] = String((fields && fields[f.k]) || '').replace(/\u2014/g, ',').trim().slice(0, 2000);
+  if (!t.fields.some((f) => clean[f.k])) throw new Error('Fill in at least one box.');
+  const at = new Date().toISOString();
+  const id = 'ask-' + at.replace(/\D/g, '').slice(0, 14) + '-' + require('crypto').randomBytes(2).toString('hex');
+  const rec = await rs.getRequests(slug);
+  rec.teamAsks = (Array.isArray(rec.teamAsks) ? rec.teamAsks : []).concat({ id, at, template: t.id, to: t.to, fields: clean }).slice(-200);
+  await rs.saveRequests(slug, rec);
+  if (!t.to) return { id, message: 'Saved on ' + client.name + '\'s record. Everly reads it next run.' };
+  const { wakeEverly } = require('../lib/everly.js');
+  const woke = await wakeEverly('Portal: Melody asked from the admin bar for ' + slug + ' (' + t.label + '), ask ' + id + '. Read it with node tools/portal.mjs read client ' + slug + ' (requests.teamAsks).' + (t.to === 'ida' ? ' Hand it to Ida.' : ''));
+  if (!woke.fired) return { id, message: 'Saved on their record. Everly picks it up on her next run.' };
+  return { id, message: t.to === 'ida' ? 'Sent. Everly hands it to Ida, and the preview comes to you.' : 'Sent. Everly has it.' };
 }
 
 function isWorkflowPath(event) {
@@ -148,6 +185,13 @@ exports.handler = async function (event) {
       if (body.action === 'wake-everly') {
         const out = await wakeEverly('Portal: Melody pressed Wake Everly' + (body.note ? '. Note: ' + String(body.note).slice(0, 300) : ''));
         return json(out.fired ? 200 : 503, out.fired ? { ok: true, message: 'Everly is waking up.' } : { ok: false, error: 'Everly did not wake: ' + out.why + '.' });
+      }
+      if (body.action === 'ask') {
+        const clients = await getAllClients();
+        const c = clients[body.slug];
+        if (!c) return json(404, { ok: false, error: 'No such business.' });
+        try { return json(200, Object.assign({ ok: true }, await sendAsk(body.slug, Object.assign({ slug: body.slug }, c), body.template, body.fields))); }
+        catch (err) { return json(400, { ok: false, error: err.message }); }
       }
       if (body.action === 'build-request') {
         const wf = require('./workflows.js');
@@ -356,8 +400,7 @@ exports.handler = async function (event) {
     if (!adminAuth.checkPassword(attempt)) {
       return html(401, loginPage('Wrong passcode.'));
     }
-    const clients = await getAllClients();
-    return html(200, renderClientGrid(clients), { 'Set-Cookie': buildCookie(makeToken(secret), secure) });
+    return { statusCode: 303, headers: Object.assign({ Location: '/admin', 'Set-Cookie': buildCookie(makeToken(secret), secure) }, NO_STORE), body: '' };
   }
 
   const token = readCookie(event.headers, COOKIE_NAME);
@@ -390,12 +433,13 @@ exports.handler = async function (event) {
 
   const slug = getSlugFromPath(event);
   const clients = await getAllClients();
-  if (!slug) return html(200, renderClientGrid(clients));
+  if (!slug) return html(200, require('./home.js').renderAdminHome(clients, await homeData(clients)));
 
   const client = clients[slug];
   if (!client) return html(404, '<p>No such client.</p>');
   const state = await getClientState(slug);
   if (!state) return html(200, '<p>No portal data for this client yet. Add a card to get started.</p>');
   if (isBriefPath(event)) return html(200, renderBriefPicker(Object.assign({ slug }, client), state));
+  if (!isEditPath(event)) return { statusCode: 302, headers: Object.assign({ Location: '/portal/' + encodeURIComponent(slug) }, NO_STORE), body: '' };
   return html(200, renderClientEditor(Object.assign({ slug }, client), state));
 };
