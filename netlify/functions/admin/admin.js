@@ -427,7 +427,8 @@ exports.handler = async function (event) {
 
   if (isWorkflowPath(event)) {
     const wf = require('./workflows.js');
-    return html(200, wf.renderWorkflows(await getAllClients(), await wf.listAsks()));
+    const textLast = await require('../portal/store').openStore('inkbox').get('last-delivery.json', { type: 'json' }).catch(() => null);
+    return html(200, wf.renderWorkflows(await getAllClients(), await wf.listAsks(), textLast));
   }
 
   if (isInquiriesPath(event)) {

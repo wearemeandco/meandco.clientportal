@@ -61,7 +61,9 @@ async function sendBuildAsk(body, clients) {
   return { id, message: rec.status === 'sent' ? 'Sent. Everly hands it to Ida, and the preview comes to you.' : 'Saved here. Everly picks it up on her next run.' };
 }
 
-function renderWorkflows(clients, asks) {
+function renderWorkflows(clients, asks, textLast) {
+  const textConnected = !!(process.env.INKBOX_API_KEY && process.env.EVERLY_INKBOX_IDENTITY_ID && process.env.MELODY_PHONE);
+  const textStatus = !textConnected ? 'Not set up yet: needs INKBOX_API_KEY, EVERLY_INKBOX_IDENTITY_ID and MELODY_PHONE in Netlify.' : textLast ? 'Last text: ' + new Date(textLast.at).toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' · ' + textLast.why : 'Settings are in. No text has arrived yet.';
   const list = steps();
   const opts = Object.keys(clients).map((s) => `<option value="${esc(s)}">${esc(clients[s].name || s)}</option>`).join('');
   const stepRows = list.map((s, i) => `<li class="wf-step">
@@ -142,7 +144,7 @@ body{padding-bottom:110px}
   <p class="wf-sec">Your requests</p>
   <ul class="wf-asks">${askRows}</ul>
   <p class="wf-sec">Texting Everly</p>
-  <div class="wf-text"><span>💬 Text Everly from your phone, like texting a teammate. Connect once after the three texting settings are in Netlify.</span><button type="button" class="wf-edit" id="inkboxConnect">Connect texting</button><span class="wf-text-note" id="inkboxNote" aria-live="polite"></span></div>
+  <div class="wf-text"><span>💬 Text Everly from your phone, like texting a teammate. Connect once after the three texting settings are in Netlify.</span><button type="button" class="wf-edit" id="inkboxConnect">Connect texting</button><span class="wf-text-note" id="inkboxNote" aria-live="polite">${esc(textStatus)}</span></div>
 </main>
 <div class="sheet" id="sheet" hidden>
   <form id="wf">
