@@ -66,13 +66,19 @@ function renderWorkflows(clients, asks, textLast) {
   const textStatus = !textConnected ? 'Not set up yet: needs INKBOX_API_KEY, EVERLY_INKBOX_IDENTITY_ID and MELODY_PHONE in Netlify.' : textLast ? 'Last text: ' + new Date(textLast.at).toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' · ' + textLast.why : 'Settings are in. No text has arrived yet.';
   const list = steps();
   const opts = Object.keys(clients).map((s) => `<option value="${esc(s)}">${esc(clients[s].name || s)}</option>`).join('');
-  const stepRows = list.map((s, i) => `<li class="wf-step">
-      <span class="wf-n">${i + 1}</span>
-      <span class="wf-e" aria-hidden="true">${s.e}</span>
-      <span class="wf-body"><b>${esc(s.name)}</b><span>${esc(s.what)}</span><span class="wf-tool">🧰 ${esc(s.tool || '')}</span>${s.why ? `<em>${esc(s.why)}</em>` : ''}</span>
-      <span class="wf-tags"><i class="who ${s.who}">${WHO[s.who]}</i><i class="st ${s.on}">${ON[s.on]}</i></span>
-      <button type="button" class="wf-edit" data-step="${esc(s.id)}" data-name="${esc(s.name)}">Change</button>
-    </li>`).join('');
+  // Each step is one row that opens like a dropdown: the row shows what it is,
+  // who runs it and whether it is on; opening it shows the detail and Change.
+  const stepRows = list.map((s, i) => `<li><details class="wf-step">
+      <summary>
+        <span class="wf-n">${i + 1}</span>
+        <span class="wf-e" aria-hidden="true">${s.e}</span>
+        <span class="wf-name">${esc(s.name)}</span>
+        <span class="wf-tags"><i class="who ${s.who}">${WHO[s.who]}</i><i class="st ${s.on}">${ON[s.on]}</i></span>
+        <span class="wf-chev" aria-hidden="true">&#9662;</span>
+      </summary>
+      <div class="wf-body"><span>${esc(s.what)}</span><span class="wf-tool">🧰 ${esc(s.tool || '')}</span>${s.why ? `<em>${esc(s.why)}</em>` : ''}
+        <button type="button" class="wf-edit" data-step="${esc(s.id)}" data-name="${esc(s.name)}">Change this step</button></div>
+    </details></li>`).join('');
   const askRows = asks.length ? asks.slice(0, 12).map((a) => `<li><b>${esc(a.stepName || 'New')}</b> ${esc(a.what.length > 110 ? a.what.slice(0, 110) + '...' : a.what)}<i class="st ${a.status === 'live' ? 'on' : a.status === 'sent' || a.status === 'building' || a.status === 'preview' || a.status === 'saved' ? 'setup' : 'off'}">${esc({ sent: 'With Everly', building: 'Ida is building', preview: 'Preview ready', live: 'Live', saved: 'Waiting for Everly' }[a.status] || a.status)}</i></li>`).join('') : '<li class="wf-none">Nothing asked yet. Anything you add shows here with where it is.</li>';
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">
 <title>Settings · Me&amp;Co.</title>
@@ -88,15 +94,20 @@ body{padding-bottom:110px}
 .wf-add span{font-size:26px}
 .wf-add small{display:block;font:500 14px var(--sans);color:var(--ink-soft)}
 .wf-list,.wf-asks{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.wf-step{display:grid;grid-template-columns:28px 34px 1fr auto;gap:10px;align-items:center;padding:14px 16px;border-radius:var(--radius);background:var(--white);border:var(--rule);box-shadow:var(--shadow-hard)}
+.wf-step{border-radius:var(--radius);background:var(--white);border:var(--rule);box-shadow:var(--shadow-hard)}
+.wf-step summary{list-style:none;display:grid;grid-template-columns:28px 30px 1fr auto 18px;gap:10px;align-items:center;padding:12px 16px;min-height:56px;cursor:pointer}
+.wf-step summary::-webkit-details-marker{display:none}
+.wf-step summary:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:var(--radius)}
 .wf-n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--oxford);color:var(--white);font:700 13px var(--mono)}
-.wf-e{font-size:24px;text-align:center}
-.wf-body{display:grid;gap:2px;min-width:0}
-.wf-body b{font-family:var(--display);font-size:17px}
+.wf-e{font-size:22px;text-align:center}
+.wf-name{font-family:var(--display);font-size:16.5px;font-weight:700;min-width:0}
+.wf-chev{transition:transform .2s;color:var(--ink-soft)}
+.wf-step[open] .wf-chev{transform:rotate(180deg)}
+.wf-body{display:grid;gap:4px;padding:0 16px 14px 84px}
 .wf-body span{font-size:14px;color:var(--ink-soft)}
 .wf-tool{font-size:12.5px!important;color:var(--ink-faint)!important}
 .wf-body em{font-style:normal;font-size:13px;font-weight:700;color:var(--oxford)}
-.wf-tags{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.wf-tags{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .wf-tags i,.wf-asks i{font-style:normal;font:700 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:var(--radius-pill);white-space:nowrap}
 .who.system{background:var(--panel);color:var(--oxford)}
 .who.ai{background:var(--lavender);color:var(--oxford)}
@@ -106,7 +117,7 @@ body{padding-bottom:110px}
 .st.on{background:var(--green-bg);color:var(--green)}
 .st.off{background:var(--panel-2);color:var(--ink-soft)}
 .st.setup{background:var(--lime);color:var(--oxford)}
-.wf-edit{grid-column:3 / -1;justify-self:start;min-height:36px;padding:6px 14px;border-radius:var(--radius-btn);border:var(--rule);background:var(--white);font:700 14px var(--sans);color:var(--oxford);cursor:pointer}
+.wf-edit{justify-self:start;margin-top:6px;min-height:40px;padding:6px 14px;border-radius:var(--radius-btn);border:var(--rule);background:var(--white);font:700 14px var(--sans);color:var(--oxford);cursor:pointer}
 .wf-edit:hover{background:var(--lime)}
 .wf-sec{font:700 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin:6px 0 -6px}
 .wf-asks li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--white);border:1px solid var(--panel-2);font-size:14.5px}
@@ -134,7 +145,7 @@ body{padding-bottom:110px}
 .ab-dock a{flex:1;display:grid;justify-items:center;gap:2px;padding:8px 4px;border-radius:12px;color:var(--oxford);font:700 12.5px var(--sans);text-decoration:none}
 .ab-dock span{font-size:20px;line-height:1}
 .ab-dock .on{background:var(--lime);box-shadow:inset 0 0 0 1.5px var(--oxford)}
-@media (max-width:560px){.wf-step{grid-template-columns:26px 1fr auto}.wf-e{display:none}.wf-edit{grid-column:2 / -1}}
+@media (max-width:560px){.wf-step summary{grid-template-columns:26px 1fr 18px}.wf-e{display:none}.wf-tags{grid-column:2;justify-content:flex-start}.wf-chev{grid-row:1;grid-column:3}.wf-body{padding-left:16px}}
 </style></head><body>
 <main class="ad">
   <header class="ad-head"><h1>Settings</h1><p>Your workflow, every step a client goes through, and requests for changes. Change a step or ask for something new: Everly hands it to Ida, and you approve the preview.</p></header>

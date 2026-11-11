@@ -628,7 +628,7 @@ ${DECISION_CSS}
   var BOOT = ${boot};
   var FORM_ACTION = '/forms/client-request.html';
   var PORTAL = '/.netlify/functions/portal?slug=' + encodeURIComponent(BOOT.slug);
-  var BOARD_URL = 'https://portal.weareme.co/portal/' + encodeURIComponent(BOOT.slug) + '/requests';
+  var BOARD_URL = 'https://clients.weareme.co/portal/' + encodeURIComponent(BOOT.slug) + '/requests';
 
   // Page filter chips.
   var chips = document.querySelectorAll('.chip');
@@ -1374,7 +1374,7 @@ ${BASE}
       post({ action: 'review-submit' }).then(function (res) {
         var fd = new FormData();
         fd.append('form-name', 'client-request'); fd.append('client', BOOT.clientName); fd.append('slug', BOOT.slug);
-        fd.append('board', 'https://portal.weareme.co' + BOARD); fd.append('kind', 'review-submission');
+        fd.append('board', 'https://clients.weareme.co' + BOARD); fd.append('kind', 'review-submission');
         fd.append('requestId', ''); fd.append('page', ''); fd.append('request', res.summary); fd.append('link', ''); fd.append('note', '');
         return fetch('/forms/client-request.html', { method: 'POST', body: fd }).then(function (r) { if (!r.ok) throw new Error('notify'); })
           .then(function () { renderThanks(res.count, true); }, function () { renderThanks(res.count, false); });

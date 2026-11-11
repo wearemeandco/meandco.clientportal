@@ -280,7 +280,7 @@ function stepperScript(slug, clientName) {
       var summary = steps.filter(function (s) { return answers[s.dataset.nsId]; }).map(function (s) { return s.dataset.nsTitle + ': ' + label(answers[s.dataset.nsId]); }).join('\\n');
       var fd = new FormData();
       fd.append('form-name', 'client-request'); fd.append('client', CLIENT); fd.append('slug', SLUG);
-      fd.append('board', 'https://portal.weareme.co/portal/' + encodeURIComponent(SLUG) + '/requests');
+      fd.append('board', 'https://clients.weareme.co/portal/' + encodeURIComponent(SLUG) + '/requests');
       fd.append('kind', 'answers'); fd.append('request', 'What we need from you: ' + j.saved.length + ' answered'); fd.append('note', summary);
       fetch('/forms/client-request.html', { method: 'POST', body: fd }).catch(function () {});
       try { localStorage.removeItem(KEY); } catch (e) {}

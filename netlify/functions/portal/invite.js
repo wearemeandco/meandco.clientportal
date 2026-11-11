@@ -19,7 +19,7 @@ const passcodes = require('./passcodes');
 const forgot = require('./forgot');
 
 const DEFAULT_FROM = 'Me&Co. <everly@admin.weareme.co>';
-const DEFAULT_ORIGIN = 'https://portal.weareme.co';
+const DEFAULT_ORIGIN = 'https://clients.weareme.co';
 const FONT = "font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;";
 
 let fetchImpl = (...a) => fetch(...a);
@@ -35,18 +35,18 @@ function buildLinkEmail(opts) {
   const url = esc(opts.link);
   const html =
     '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>' +
-    '<body style="margin:0;padding:0;background:#FAF8F2;">' +
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FAF8F2;padding:28px 12px;"><tr><td align="center">' +
+    '<body style="margin:0;padding:0;background:#FFFCF5;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFFCF5;padding:28px 12px;"><tr><td align="center">' +
     '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#FFFFFF;border-radius:14px;overflow:hidden;">' +
     '<tr><td style="background:#22315E;padding:24px 34px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>' +
-    '<td style="padding-right:9px;"><div style="width:11px;height:11px;background:#F3C7B8;border-radius:50%;font-size:0;line-height:0;">&nbsp;</div></td>' +
-    '<td style="' + FONT + 'font-size:17px;font-weight:700;color:#FAF8F2;letter-spacing:-0.2px;">Me&Co.</td></tr></table></td></tr>' +
+    '<td style="padding-right:9px;"><div style="width:11px;height:11px;background:#D9A5A0;border-radius:50%;font-size:0;line-height:0;">&nbsp;</div></td>' +
+    '<td style="' + FONT + 'font-size:17px;font-weight:700;color:#FFFCF5;letter-spacing:-0.2px;">Me&Co.</td></tr></table></td></tr>' +
     '<tr><td style="padding:32px 34px 4px;"><div style="' + FONT + 'font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#22315E;">' + esc(opts.eyebrow) + '</div>' +
     '<h1 style="margin:12px 0 0;' + FONT + 'font-size:24px;line-height:1.28;color:#22315E;font-weight:700;">' + esc(opts.headline) + '</h1></td></tr>' +
     '<tr><td style="padding:18px 34px 0;' + FONT + '">' + opts.body + '</td></tr>' +
     '<tr><td align="center" style="padding:12px 34px 4px;"><a href="' + url + '" style="display:inline-block;background:#2A4FBF;color:#FFFFFF;' + FONT + 'font-size:14px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;text-decoration:none;padding:15px 38px;border-radius:12px;">' + esc(opts.button) + '</a></td></tr>' +
     '<tr><td align="center" style="padding:0 34px 8px;' + FONT + 'font-size:12px;color:#8a8578;">or paste this in: <a href="' + url + '" style="color:#22315E;word-break:break-all;">' + url + '</a></td></tr>' +
-    '<tr><td style="padding:16px 34px 30px;"><div style="border-top:1px solid #E4E0D0;padding-top:16px;' + FONT + 'font-size:11.5px;color:#8a8578;">Me&Co. &middot; hello@weareme.co</div></td></tr>' +
+    '<tr><td style="padding:16px 34px 30px;"><div style="border-top:1px solid #EFE8DC;padding-top:16px;' + FONT + 'font-size:11.5px;color:#8a8578;">Me&Co. &middot; hello@weareme.co</div></td></tr>' +
     '</table></td></tr></table></body></html>';
   const text = opts.text + '\n\nMe&Co.\nhello@weareme.co\n';
   return { subject: opts.subject, html, text };
@@ -56,7 +56,7 @@ function buildInviteEmail(client, link) {
   const name = esc(client.name || 'your portal');
   const body =
     '<p style="margin:0 0 18px;' + FONT + 'font-size:15px;line-height:1.6;color:#1a1a1a;">Your Me&Co. portal for ' + name + ' is ready. Tap the button to choose your own passcode and sign in.</p>' +
-    '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 18px;"><tr><td style="background:#FAF8F2;border:1px solid #E4E0D0;border-radius:12px;padding:14px 18px;' + FONT + 'color:#22315E;font-size:15px;line-height:1.6;">The link works once and lasts 72 hours. If it runs out, use Forgot passcode on the sign-in page at portal.weareme.co.</td></tr></table>';
+    '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 18px;"><tr><td style="background:#FFFCF5;border:1px solid #EFE8DC;border-radius:12px;padding:14px 18px;' + FONT + 'color:#22315E;font-size:15px;line-height:1.6;">The link works once and lasts 72 hours. If it runs out, use Forgot passcode on the sign-in page at clients.weareme.co.</td></tr></table>';
   return buildLinkEmail({
     eyebrow: 'Your portal',
     headline: 'Your portal is ready',
@@ -67,7 +67,7 @@ function buildInviteEmail(client, link) {
     text:
       'Your Me&Co. portal for ' + (client.name || 'your portal') + ' is ready. Choose your own passcode and sign in here:\n\n' +
       link + '\n\n' +
-      'The link works once and lasts 72 hours. If it runs out, use Forgot passcode on the sign-in page at portal.weareme.co.',
+      'The link works once and lasts 72 hours. If it runs out, use Forgot passcode on the sign-in page at clients.weareme.co.',
   });
 }
 

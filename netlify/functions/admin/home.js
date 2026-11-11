@@ -158,7 +158,13 @@ function renderArchivedList(clients) {
     const when = c.archivedAt ? new Date(c.archivedAt).toISOString().slice(0, 10) : '';
     return `<li class="ar-row" data-slug="${esc(slug)}">
       <div><b class="ar-name">${esc(c.name)}</b><span class="ar-meta">${when ? 'Archived ' + esc(when) : 'Archived'}</span></div>
-      <div class="ar-acts"><button type="button" class="ar-unarchive" data-slug="${esc(slug)}">Unarchive</button><a href="/admin/${esc(slug)}/edit">Edit page</a></div>
+      <div class="ar-acts"><button type="button" class="ar-unarchive" data-slug="${esc(slug)}">Unarchive</button><button type="button" class="ar-delete" data-slug="${esc(slug)}">Delete</button></div>
+      <div class="ar-del" hidden>
+        <p>Deleting removes this business for good: their portal, answers, files, requests and stored keys. It cannot be undone.</p>
+        <label for="del-${esc(slug)}">Type <b>${esc(c.name || slug)}</b> to delete</label>
+        <input id="del-${esc(slug)}" type="text" autocomplete="off" spellcheck="false" data-name="${esc(c.name || slug)}">
+        <div class="ar-acts"><button type="button" class="ar-cancel">Cancel</button><button type="button" class="ar-confirm" data-slug="${esc(slug)}" disabled>Delete forever</button></div>
+      </div>
     </li>`;
   }).join('');
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">
@@ -177,9 +183,17 @@ ${BASE}
 .ar-acts{display:flex;gap:12px;align-items:center;font-weight:600}
 .ar-acts button{min-height:44px;padding:0 16px;border-radius:var(--radius-btn);border:var(--rule);background:var(--white);color:var(--oxford);font:700 14.5px var(--display);cursor:pointer}
 .ar-note{min-height:1em;font-size:14px;color:var(--ink-soft)}
+.ar-delete{color:var(--oxford)}
+.ar-del{flex-basis:100%;display:grid;gap:8px;padding-top:12px;border-top:var(--rule)}
+.ar-del[hidden]{display:none}
+.ar-del p{margin:0;font-size:14.5px}
+.ar-del label{font-size:14.5px}
+.ar-del input{min-height:44px;padding:8px 12px;border:var(--rule);border-radius:var(--radius-btn);font:inherit;background:var(--white)}
+.ar-acts .ar-confirm{background:var(--oxford);color:var(--white)}
+.ar-acts .ar-confirm[disabled]{opacity:.45;cursor:not-allowed}
 </style></head><body>
 <main class="ad">
-  <header><a href="/admin">&larr; All businesses</a><h1>Archived businesses</h1><p>${slugs.length ? 'Their portals are closed. Nothing was removed, and Unarchive opens a portal again.' : 'No archived businesses.'}</p></header>
+  <header><a href="/admin">&larr; All businesses</a><h1>Archived businesses</h1><p>${slugs.length ? 'Their portals are closed. Unarchive opens a portal again. Delete removes a business for good.' : 'No archived businesses.'}</p></header>
   <ul class="ar-list">${rows}</ul>
   <p class="ar-note" id="arNote" aria-live="polite"></p>
 </main>
@@ -196,6 +210,31 @@ document.querySelectorAll('.ar-unarchive').forEach(function (btn) {
         note.textContent = r.message;
       })
       .catch(function () { note.textContent = 'That did not work.'; });
+  });
+});
+document.querySelectorAll('.ar-delete').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var box = btn.closest('.ar-row').querySelector('.ar-del');
+    box.hidden = false; box.querySelector('input').focus();
+  });
+});
+document.querySelectorAll('.ar-del').forEach(function (box) {
+  var input = box.querySelector('input'), confirmBtn = box.querySelector('.ar-confirm');
+  input.addEventListener('input', function () { confirmBtn.disabled = input.value !== input.getAttribute('data-name'); });
+  box.querySelector('.ar-cancel').addEventListener('click', function () { box.hidden = true; input.value = ''; confirmBtn.disabled = true; });
+  confirmBtn.addEventListener('click', function () {
+    if (input.value !== input.getAttribute('data-name')) return;
+    var note = document.getElementById('arNote');
+    confirmBtn.disabled = true;
+    note.textContent = 'Deleting...';
+    fetch('/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete-client', slug: confirmBtn.getAttribute('data-slug'), confirm: input.value }) })
+      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (!r.ok) { note.textContent = r.error || 'That did not work.'; confirmBtn.disabled = false; return; }
+        var row = box.closest('.ar-row'); row.parentNode.removeChild(row);
+        note.textContent = r.message;
+      })
+      .catch(function () { note.textContent = 'That did not work.'; confirmBtn.disabled = false; });
   });
 });
 </script>

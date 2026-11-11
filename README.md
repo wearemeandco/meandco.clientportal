@@ -9,7 +9,7 @@ Import this repository into Netlify (production branch `main`, deploy previews o
 | Name | What it is |
 | --- | --- |
 | `ADMIN_PORTAL_PASSWORD` | Melody's admin passcode (`MELODY_ADMIN` also works). She signs in at `/login` as melody@weareme.co with it, or at `/admin` |
-| `PORTAL_PUBLIC_ORIGIN` | the portal's address, like `https://portal.weareme.co` |
+| `PORTAL_PUBLIC_ORIGIN` | the portal's address, like `https://clients.weareme.co` |
 | `RESEND_API_KEY` | sends portal email from Melody's Resend account |
 | `PORTAL_MAIL_FROM` | the sender, like `Me&Co. <hello@weareme.co>` |
 | `BOOKING_URL` | Melody's booking link (https), shown on the thank-you screen and in the confirmation email. Leave it unset and the email says Melody will reach out to set a time, with no button |

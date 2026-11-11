@@ -43,7 +43,9 @@ function adminBarHtml(client) {
       <div class="ab-row"><button type="button" class="ab-cancel ab-back">← Back</button><button type="button" class="ab-send ab-next"${t.fields.length < 2 ? ' hidden' : ''}>Next →</button><button type="submit" class="ab-send ab-go"${t.fields.length > 1 ? ' hidden' : ''}>${t.to ? 'Send to ' + (t.to === 'ida' ? 'Ida' : 'Everly') : 'Save note'}</button></div>
     </form>`).join('');
   return `<style>
+/* The admin view never plays the client's welcome, so the welcome never holds the page still. */
 #welcome{display:none!important}
+body.welcome-open{overflow:visible!important}
 .ab [hidden]{display:none!important}
 .ab{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:var(--rule);font-family:var(--sans)}
 .ab-top{max-width:1060px;margin:0 auto;padding:10px max(16px,env(safe-area-inset-left,0px));display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}

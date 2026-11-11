@@ -2,9 +2,10 @@
    "Authorization: Bearer <EVERLY_AGENT_TOKEN>" and a JSON body naming one
    operation. Everly reaches it with `node tools/portal.mjs` in her own
    repository. It reads clients, inquiries and Melody's workflow asks, and
-   keeps cards true and writes notes, ask updates and inquiry stages. Nothing
-   here deletes or archives a client, sends mail, or touches money, passcodes,
-   locks or contracts.
+   keeps cards true, adds a business (portal locked) when Melody asks, and
+   writes notes, ask updates and inquiry stages. Nothing here deletes or
+   archives a client, unlocks a portal, sends mail, or touches money,
+   passcodes or contracts.
 
    Operations:
      { op: "read", collection: "clients" }          every client and their portal stage
@@ -20,6 +21,9 @@
                                                      fields: title, description, status, notes, url, content
      { op: "add-item", slug, cardId, item }            item: type (link, text, note), title, description, url, content
      { op: "inquiry-update", id, stage, note }        stage: contacted, call_booked, proposal, won, closed
+     { op: "add-client", name, emails }              adds a business and creates its portal, locked, with
+                                                     the same seven cards as Melody's Add a business form.
+                                                     Sends nothing: the invite is Melody's button.
      { op: "log", agent, woke, did, links, waiting, status }
                                                      one entry for this run, shown on the admin Everly tab
                                                      agent: everly or ida; status: done, waiting, blocked;
@@ -148,6 +152,18 @@ exports.handler = async function (event) {
       await blobs.addCardItem(slug, cardId, { type, title: fields.title, description: fields.description || '', url: fields.url || null, content: fields.content || null });
       return json(200, { ok: true });
     }
+    if (body.op === 'add-client') {
+      const { createClient, NewClientError } = require('../portal/new-client.js');
+      const emails = Array.isArray(body.emails) ? body.emails.slice(0, 10).map((e) => clean(e, 200)) : [];
+      try {
+        const made = await createClient({ name: clean(body.name, 120), emails, locked: true });
+        await blobs.appendActivity(made.slug, 'Everly: set up this portal.');
+        return json(200, { ok: true, slug: made.slug, locked: true, next: 'Melody opens the business in her admin, checks it, unlocks it and sends the invite.' });
+      } catch (err) {
+        if (err instanceof NewClientError) throw new DoorError(err.message);
+        throw err;
+      }
+    }
     if (body.op === 'inquiry-update') {
       const id = clean(body.id, 120);
       if (INQUIRY_STAGES.indexOf(body.stage) === -1) return json(400, { error: 'stage is one of ' + INQUIRY_STAGES.join(', ') });
@@ -164,7 +180,7 @@ exports.handler = async function (event) {
       const out = await require('../lib/everly.js').wakeIda('Everly: build request ' + file + ' at everlyagent commit ' + sha + '. ' + clean(body.summary, 600));
       return json(out.fired ? 200 : 502, out.fired ? { woke: true } : { woke: false, why: out.why });
     }
-    return json(400, { error: 'op is read, ask-update, note, update-card, update-item, add-item, log, inquiry-update or wake-ida' });
+    return json(400, { error: 'op is read, ask-update, note, update-card, update-item, add-item, add-client, log, inquiry-update or wake-ida' });
   } catch (err) {
     if (err instanceof DoorError || err instanceof require('../portal/agent-log.js').LogError || /^No (card|item)/.test(err.message)) return json(400, { error: err.message });
     console.error('[hook-agent] ' + body.op + ' failed: ' + err.message);
