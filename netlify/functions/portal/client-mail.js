@@ -31,7 +31,7 @@ function buildMail(client, kind) {
   if (kind === 'brief') {
     const link = origin + '/portal/' + encodeURIComponent(client.slug) + '/brief';
     const lead = 'Your onboarding brief is ready. It is a short set of questions, one at a time, and you can stop and come back whenever you like.';
-    const help = 'You will sign in with your passcode first. If you have not chosen one yet, use Forgot passcode on the sign-in page at portal.weareme.co.';
+    const help = 'You will sign in with your passcode first. If you have not chosen one yet, use Forgot passcode on the sign-in page at clients.weareme.co.';
     return invite.buildLinkEmail({
       eyebrow: 'Your brief',
       headline: 'Your onboarding brief',

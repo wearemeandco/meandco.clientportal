@@ -305,7 +305,7 @@ exports.handler = async function (event) {
         const passcode = passcodes.generatePasscode();
         const rec = await passcodes.setPasscode(slugToReset, passcode);
         const token = makeMagicToken(slugToReset, passcodes.secretFromRecord(rec));
-        const origin = process.env.PORTAL_PUBLIC_ORIGIN || 'https://portal.weareme.co';
+        const origin = process.env.PORTAL_PUBLIC_ORIGIN || 'https://clients.weareme.co';
         return json(200, {
           ok: true,
           passcode,
@@ -360,15 +360,7 @@ exports.handler = async function (event) {
         return json(200, { ok: true, deleted: slugD, counts, message: 'Deleted ' + slugD + ' and all of its records.' });
       }
       if (body.action === 'create-client') {
-        const slug = String(body.slug || '')
-          .toLowerCase()
-          .trim()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '');
-        if (!slug) return json(400, { ok: false, error: 'Give the client a name to slugify.' });
-        const existing = await getAllClients();
-        if (existing[slug]) return json(400, { ok: false, error: 'A client with that slug already exists.' });
-        // The add-a-client form sends each choice explicitly. A caller that
+        // The add-a-business form sends each choice explicitly. A caller that
         // names none keeps the original behaviour: portal created, invite
         // sent when an address is on file.
         const createPortal = body.createPortal !== false;
@@ -379,51 +371,20 @@ exports.handler = async function (event) {
         if (!createPortal && (wantBrief || (body.sendInvite === true))) {
           return json(400, { ok: false, error: 'The invite and the brief go to a portal. Tick Create their portal, or untick them.' });
         }
-        const addresses = normalizeEmails([].concat(body.emails || [], body.email ? [body.email] : []));
-        if (addresses.error) return json(400, { ok: false, error: addresses.error });
-        const indexExtra = {};
-        if (addresses.list.length) { indexExtra.email = addresses.list[0]; indexExtra.emails = addresses.list; }
-        if (lockPortal) indexExtra.locked = true;
         if (wantCalendar && !require('../portal/client-mail').bookingUrl()) {
           return json(400, { ok: false, error: 'There is no booking link set for the calendar email.' });
         }
-        const entry = await addClientToIndex(slug, body.name || slug, indexExtra);
-        // New client, not a repeat, starts at the guided sequence's entry
-        // point: Discovery unlocked, everything after it locked until it
-        // clears, same journey docs/client-portal-mvp-spec.md describes.
-        // Full seven-card order, no exceptions: Discovery, Proposal,
-        // Contract, Onboarding, Invoice, Deliverables, Offboarding.
-        // Skipping Discovery or Onboarding here breaks the sequence, so
-        // render the real create-client flow and check it rather than
-        // assuming the code matches the rule. Onboarding's id uses the
-        // disambiguated "-onboarding-questions" suffix on purpose, never
-        // bare "-onboarding", so it can never collide with an
-        // "Onboarding Docs" style card on the same regex.
-        //
-        // An optional `cards` array overrides this default sequence, for a
-        // build whose released scope is narrower than the full seven stages
-        // (a Discovery-only portal ahead of a written proposal). Absent, the
-        // default below is unchanged.
-        const defaultCards = [
-          { id: 'project1-discovery', project: 'Project 1', label: 'Discovery', status: 'not_started', locked: false },
-          { id: 'project1-proposal', project: 'Project 1', label: 'Proposal', status: 'not_started', locked: true },
-          { id: 'project1-contract', project: 'Project 1', label: 'Contract', status: 'not_started', locked: true },
-          { id: 'project1-onboarding-questions', project: 'Project 1', label: 'Onboarding', status: 'not_started', locked: true, items: [] },
-          { id: 'project1-invoice', project: 'Project 1', label: 'Invoice', status: 'not_started', locked: true },
-          { id: 'project1-deliverables', project: 'Project 1', label: 'Deliverables', status: 'not_started', locked: true, items: [] },
-          { id: 'project1-offboarding', project: 'Project 1', label: 'Offboarding', status: 'not_started', locked: true, lockRule: 'invoice', items: [] },
-        ];
-        const cards = Array.isArray(body.cards) && body.cards.length ? body.cards : defaultCards;
-        if (createPortal) {
-          await saveClientState(slug, {
-            slug,
-            name: body.name || slug,
-            repeatClient: false,
-            paidUpfrontProjects: [],
-            cards,
-            activity: [],
-          });
+        const { createClient, NewClientError } = require('../portal/new-client');
+        let made;
+        try {
+          made = await createClient({ name: body.name, slug: body.slug, emails: [].concat(body.emails || [], body.email ? [body.email] : []), locked: lockPortal, createPortal, cards: body.cards });
+        } catch (err) {
+          if (err instanceof NewClientError) return json(400, { ok: false, error: err.message });
+          throw err;
         }
+        const slug = made.slug;
+        const entry = made.entry;
+        await require('../lib/everly').wakeForPortal(slug, 'business-added', slug).catch(() => null);
         // Each email that goes to the client is one the caller asked for. A
         // failed send never fails creation.
         const target = Object.assign({ slug }, entry);

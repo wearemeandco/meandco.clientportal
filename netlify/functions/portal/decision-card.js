@@ -174,7 +174,7 @@ function decisionScript(slug, clientName) {
   var SLUG = ${JSON.stringify(String(slug))};
   var CLIENT = ${JSON.stringify(String(clientName || ''))};
   var PORTAL = '/.netlify/functions/portal?slug=' + encodeURIComponent(SLUG);
-  var BOARD = 'https://portal.weareme.co/portal/' + encodeURIComponent(SLUG) + '/requests';
+  var BOARD = 'https://clients.weareme.co/portal/' + encodeURIComponent(SLUG) + '/requests';
   function save(body) {
     return fetch(PORTAL, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (res) {

@@ -1,7 +1,7 @@
 // Puts every client document behind that client's own portal session.
 //
 // Everything client-shaped lives in the assigned portal. Anything related to
-// clients belongs in portal.weareme.co, and behind that client's session.
+// clients belongs in clients.weareme.co, and behind that client's session.
 //
 // /portal/<slug> is gated by an HMAC session cookie.
 // /contracts/*, /invoices/* and /receipts/* are static files in public/,

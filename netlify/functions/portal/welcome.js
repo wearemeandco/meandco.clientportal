@@ -200,7 +200,8 @@ function welcomeScript(client) {
       if (t && t.closest && t.closest('#welcome-again')) { unmark(); window.scrollTo(0, 0); play(); }
     });
 
-    if (!seen()) play();
+    // The admin view carries its own bar (.ab) and skips the welcome.
+    if (!seen() && !document.querySelector('.ab')) play();
   })();
   </script>`;
 }

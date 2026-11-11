@@ -237,7 +237,7 @@ ${BASE}
   var BOOT = ${boot};
   var FORM_ACTION = '/forms/client-request.html';
   var PORTAL = '/.netlify/functions/portal?slug=' + encodeURIComponent(BOOT.slug);
-  var PAGE_URL = 'https://portal.weareme.co/portal/' + encodeURIComponent(BOOT.slug) + '/files';
+  var PAGE_URL = 'https://clients.weareme.co/portal/' + encodeURIComponent(BOOT.slug) + '/files';
 
   function postPortal(body) {
     return fetch(PORTAL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) })
