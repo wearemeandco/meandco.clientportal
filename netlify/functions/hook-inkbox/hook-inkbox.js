@@ -2,11 +2,12 @@
    Melody's phone wakes Everly with a pointer to the conversation; she reads
    the text and answers it through her Inkbox connector. Texts from anyone
    else, and a plain "ok" or "gracias", wake no one. A delivery Inkbox sends
-   twice wakes once. A text that lands within ten minutes of a wake waits for
-   that run, which reads the conversation again before it ends. Inkbox always
+   twice wakes once. A text that lands within 45 seconds of a wake joins that
+   run, which is still going and reads the conversation again before it ends;
+   a run takes about 30 seconds. Any later text wakes her again. Inkbox always
    gets its 200 for a genuine delivery, so a failed wake is logged, not
    retried. The last delivery is kept for Settings to show. */
-const HOLD_MS = 10 * 60 * 1000;
+const HOLD_MS = 45 * 1000;
 const box = () => require('../portal/store').openStore('inkbox');
 async function note(rec) { try { await box().setJSON('last-delivery.json', Object.assign({ at: new Date().toISOString() }, rec)); } catch (e) { console.error('[hook-inkbox] note: ' + e.message); } }
 const inkbox = require('../lib/inkbox.js');
